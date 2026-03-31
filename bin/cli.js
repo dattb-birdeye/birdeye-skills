@@ -1,0 +1,886 @@
+#!/usr/bin/env node
+
+/**
+ * Birdeye Skills CLI
+ *
+ * Install, update, and manage Birdeye AI skills for Claude Code, Cursor,
+ * Codex CLI, ChatGPT, and other AI assistants.
+ *
+ * Usage:
+ *   birdeye-skills install [--all | skill-name]   Install skills
+ *   birdeye-skills install --cursor --project DIR  Install as Cursor rules
+ *   birdeye-skills install --codex --project DIR   Generate AGENTS.md
+ *   birdeye-skills install --bundle                Generate bundled prompt
+ *   birdeye-skills update                          Update all installed skills
+ *   birdeye-skills list                            List installed skills
+ *   birdeye-skills check                           Check for updates
+ *   birdeye-skills info <skill-name>               Show skill details
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, cpSync, existsSync, readdirSync } from 'fs';
+import { join, dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+
+const PKG_ROOT = resolve(__dirname, '..');
+const LOCAL_SKILLS_DIR = join(PKG_ROOT, 'skills');
+const HOME = process.env.HOME || process.env.USERPROFILE || '~';
+const CONFIG_DIR = join(HOME, '.birdeye');
+const CONFIG_FILE = join(CONFIG_DIR, 'skills-config.json');
+const SKILL_TTL_DAYS = 30;   // agent warns user to update after this many days
+
+// Colors & icons (disabled when not a TTY)
+const isTTY = process.stdout.isTTY;
+const C = {
+  green:  isTTY ? '\x1b[0;32m' : '', red:    isTTY ? '\x1b[0;31m' : '',
+  yellow: isTTY ? '\x1b[1;33m' : '', cyan:   isTTY ? '\x1b[0;36m' : '',
+  bold:   isTTY ? '\x1b[1m'    : '', dim:    isTTY ? '\x1b[2m'    : '',
+  reset:  isTTY ? '\x1b[0m'    : '',
+};
+const ok   = (m) => console.log(`  ${C.green}✓${C.reset}  ${m}`);
+const warn = (m) => console.log(`  ${C.yellow}⚠${C.reset}  ${m}`);
+const info = (m) => console.log(`  ${C.cyan}→${C.reset}  ${m}`);
+const skip = (m) => console.log(`  ${C.dim}–  ${m}${C.reset}`);
+
+const CLAUDE_SKILLS_DIR = join(HOME, '.claude', 'skills');
+
+const ALL_SKILLS = [
+  'birdeye-router',
+  'birdeye-market-data',
+  'birdeye-token-discovery',
+  'birdeye-transaction-flow',
+  'birdeye-wallet-intelligence',
+  'birdeye-holder-analysis',
+  'birdeye-security-analysis',
+  'birdeye-smart-money',
+  'birdeye-realtime-streams',
+  'birdeye-wallet-dashboard-builder',
+  'birdeye-token-screener-builder',
+  'birdeye-alert-agent',
+  'birdeye-research-assistant',
+];
+
+const DOMAIN_SKILLS = ALL_SKILLS.filter(s => !s.includes('builder') && !s.includes('agent') && !s.includes('assistant') && s !== 'birdeye-router');
+const WORKFLOW_SKILLS = ALL_SKILLS.filter(s => s.includes('builder') || s.includes('agent') || s.includes('assistant'));
+
+// Cursor trigger descriptions for .mdc frontmatter
+const CURSOR_TRIGGERS = {
+  'birdeye-router': 'Birdeye API, blockchain data, DeFi analytics, token data, wallet analysis',
+  'birdeye-market-data': 'token price, OHLCV, candles, chart, volume, liquidity, market cap, historical price',
+  'birdeye-token-discovery': 'find token, search token, trending, new listing, meme token, token list, gainers, losers',
+  'birdeye-transaction-flow': 'trades, transactions, swaps, transfers, balance change, mint, burn',
+  'birdeye-wallet-intelligence': 'wallet portfolio, net worth, PnL, profit loss, top traders, wallet history',
+  'birdeye-holder-analysis': 'holder distribution, top holders, concentration, holder count',
+  'birdeye-security-analysis': 'token security, rug pull, risk, audit, mint authority, freeze authority',
+  'birdeye-smart-money': 'smart money, whale tracking, money flow, smart wallet',
+  'birdeye-realtime-streams': 'real-time, live, stream, WebSocket, price feed, new listing alert, large trade',
+  'birdeye-wallet-dashboard-builder': 'wallet dashboard, portfolio monitor, whale monitor, wallet report',
+  'birdeye-token-screener-builder': 'token screener, trending board, alpha finder, filter tokens',
+  'birdeye-alert-agent': 'alert, notification, price alert, whale alert, volume spike, monitor',
+  'birdeye-research-assistant': 'research report, token brief, analysis, due diligence, compare tokens',
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function stripFrontmatter(content) {
+  const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n([\s\S]*)$/);
+  return match ? match[1] : content;
+}
+
+function extractDescription(content) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return '';
+  const fmMatch = match[1].match(/^description:\s*["']?(.+?)["']?\s*$/m);
+  return fmMatch ? fmMatch[1] : '';
+}
+
+// ---------------------------------------------------------------------------
+// Config Management
+// ---------------------------------------------------------------------------
+
+function loadConfig() {
+  if (!existsSync(CONFIG_FILE)) return { installed: {}, lastCheck: null };
+  return JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+}
+
+function saveConfig(config) {
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+function loadVersions() {
+  const versionsPath = join(LOCAL_SKILLS_DIR, 'versions.json');
+  if (!existsSync(versionsPath)) return {};
+  return JSON.parse(readFileSync(versionsPath, 'utf-8'));
+}
+
+// ---------------------------------------------------------------------------
+// Platform Install: Claude Code
+// ---------------------------------------------------------------------------
+
+function installSkillClaude(skillName, targetBase, mode = 'personal') {
+  const srcDir = join(LOCAL_SKILLS_DIR, skillName);
+  const skillMdPath = join(srcDir, 'SKILL.md');
+
+  if (!existsSync(skillMdPath)) {
+    console.error(`  Error: ${skillName}/SKILL.md not found at ${srcDir}`);
+    return false;
+  }
+
+  const target = join(targetBase, skillName);
+  mkdirSync(target, { recursive: true });
+
+  cpSync(skillMdPath, join(target, 'SKILL.md'));
+
+  const refsDir = join(srcDir, 'references');
+  if (existsSync(refsDir)) {
+    cpSync(refsDir, join(target, 'references'), { recursive: true });
+  }
+
+  // Write install metadata
+  const versions = loadVersions();
+  const meta = {
+    skill: skillName,
+    version: versions[skillName] || '1.0.0',
+    installedAt: new Date().toISOString(),
+    source: 'local',
+    platform: 'claude',
+  };
+  writeFileSync(join(target, '.birdeye-meta.json'), JSON.stringify(meta, null, 2));
+
+  // Update config
+  const config = loadConfig();
+  config.installed = config.installed || {};
+  config.installed[skillName] = {
+    version: meta.version,
+    installedAt: meta.installedAt,
+    path: target,
+    mode,
+    platform: 'claude',
+  };
+  saveConfig(config);
+
+  ok(skillName);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Platform Install: Cursor (.mdc rules)
+// ---------------------------------------------------------------------------
+
+function installSkillCursor(skillName, targetBase) {
+  const srcDir = join(LOCAL_SKILLS_DIR, skillName);
+  const skillMdPath = join(srcDir, 'SKILL.md');
+
+  if (!existsSync(skillMdPath)) {
+    console.error(`  Error: ${skillName}/SKILL.md not found`);
+    return false;
+  }
+
+  mkdirSync(targetBase, { recursive: true });
+
+  const content = readFileSync(skillMdPath, 'utf-8');
+  const description = CURSOR_TRIGGERS[skillName] || extractDescription(content);
+  const alwaysApply = skillName === 'birdeye-router' ? 'true' : 'false';
+  const body = stripFrontmatter(content);
+
+  // Build .mdc content
+  let mdc = `---\ndescription: ${description}\nglobs: \nalwaysApply: ${alwaysApply}\n---\n\n${body}`;
+
+  // Inline references
+  const refsDir = join(srcDir, 'references');
+  if (existsSync(refsDir)) {
+    mdc += '\n\n---\n\n## References\n';
+    for (const file of readdirSync(refsDir).filter(f => f.endsWith('.md'))) {
+      const refContent = readFileSync(join(refsDir, file), 'utf-8');
+      const refName = file.replace('.md', '');
+      mdc += `\n### ${refName}\n\n${refContent}\n`;
+    }
+  }
+
+  writeFileSync(join(targetBase, `${skillName}.mdc`), mdc);
+  ok(`${skillName} → ${skillName}.mdc`);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Platform Install: Codex (AGENTS.md)
+// ---------------------------------------------------------------------------
+
+function installSkillsCodex(skillNames, targetBase) {
+  const outputPath = existsSync(join(targetBase, 'AGENTS.md'))
+    ? join(targetBase, 'AGENTS-birdeye.md')
+    : join(targetBase, 'AGENTS.md');
+
+  if (outputPath.endsWith('AGENTS-birdeye.md')) {
+    warn('AGENTS.md already exists — saving to AGENTS-birdeye.md instead');
+    info('Merge into your AGENTS.md or rename to use.');
+    console.log('');
+  }
+
+  let content = `# Birdeye DeFi Analytics Agent
+
+You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills below to handle user requests about token prices, wallet analysis, smart money tracking, and more.
+
+## Prerequisites
+
+- **Base URL**: \`https://public-api.birdeye.so\`
+- **Auth**: Include \`X-API-KEY: <key>\` header in all requests
+- **Chain**: Include \`x-chain: <chain>\` header (default: \`solana\`)
+- **Supported chains**: solana, ethereum, bsc, arbitrum, optimism, polygon, avalanche, base, zksync, sui
+
+## Rate Limits
+
+| Tier | Rate Limit |
+|---|---|
+| Standard | 1 rps |
+| Lite / Starter | 15 rps |
+| Premium | 50 rps / 1000 rpm |
+| Business | 100 rps / 1500 rpm |
+| Enterprise | Custom |
+
+**Wallet API**: 30 rpm hard limit regardless of tier.
+`;
+
+  let installed = 0;
+  for (const skillName of skillNames) {
+    const srcDir = join(LOCAL_SKILLS_DIR, skillName);
+    const skillMdPath = join(srcDir, 'SKILL.md');
+
+    if (!existsSync(skillMdPath)) {
+      skip(`${skillName} (SKILL.md not found)`);
+      continue;
+    }
+
+    const raw = readFileSync(skillMdPath, 'utf-8');
+    content += `\n\n---\n\n## ${skillName}\n\n${stripFrontmatter(raw)}`;
+
+    // Inline operation-map and caveats
+    for (const ref of ['operation-map', 'caveats']) {
+      const refPath = join(srcDir, 'references', `${ref}.md`);
+      if (existsSync(refPath)) {
+        content += `\n\n### ${ref}\n\n${readFileSync(refPath, 'utf-8')}`;
+      }
+    }
+
+    ok(skillName);
+    installed++;
+  }
+
+  writeFileSync(outputPath, content);
+  console.log(`\n  Generated: ${outputPath}`);
+  return installed;
+}
+
+// ---------------------------------------------------------------------------
+// Platform Install: Bundle (ChatGPT / OpenAI API)
+// ---------------------------------------------------------------------------
+
+function installSkillsBundle(skillNames, outputPath) {
+  let content = `# Birdeye DeFi Analytics — System Prompt
+
+You are an expert in Birdeye's multi-chain DeFi analytics API. You can help users with token prices, OHLCV data, wallet analysis, smart money tracking, security analysis, and real-time streaming data across 10+ blockchains.
+
+## Prerequisites
+
+- **Base URL**: \`https://public-api.birdeye.so\`
+- **Authentication**: Include \`X-API-KEY: <key>\` header in all requests
+- **Chain Selection**: Include \`x-chain: <chain>\` header (default: \`solana\`)
+- **Supported Chains**: solana, ethereum, bsc, arbitrum, optimism, polygon, avalanche, base, zksync, sui
+
+## Rate Limits
+
+| Tier | Rate Limit |
+|---|---|
+| Standard | 1 rps |
+| Lite / Starter | 15 rps |
+| Premium | 50 rps / 1000 rpm |
+| Business | 100 rps / 1500 rpm |
+| Enterprise | Custom |
+
+**Wallet API**: 30 rpm hard limit regardless of tier.
+`;
+
+  let installed = 0;
+  for (const skillName of skillNames) {
+    const srcDir = join(LOCAL_SKILLS_DIR, skillName);
+    const skillMdPath = join(srcDir, 'SKILL.md');
+
+    if (!existsSync(skillMdPath)) {
+      skip(`${skillName} (SKILL.md not found)`);
+      continue;
+    }
+
+    const raw = readFileSync(skillMdPath, 'utf-8');
+    content += `\n\n---\n\n## ${skillName}\n\n${stripFrontmatter(raw)}`;
+
+    // Inline ALL references for complete prompt
+    const refsDir = join(srcDir, 'references');
+    if (existsSync(refsDir)) {
+      for (const file of readdirSync(refsDir).filter(f => f.endsWith('.md'))) {
+        const refContent = readFileSync(join(refsDir, file), 'utf-8');
+        const refName = file.replace('.md', '');
+        content += `\n\n### ${refName}\n\n${refContent}`;
+      }
+    }
+
+    ok(skillName);
+    installed++;
+  }
+
+  writeFileSync(outputPath, content);
+  console.log('');
+  ok(`Generated: ${outputPath}`);
+  return installed;
+}
+
+// ---------------------------------------------------------------------------
+// MCP Config Setup
+// ---------------------------------------------------------------------------
+
+const BIRDEYE_MCP_CONFIG = {
+  command: 'npx',
+  args: [
+    '-y',
+    'mcp-remote@0.1.38',
+    'https://mcp.birdeye.so/mcp',
+    '--header',
+    'x-api-key:${API_KEY}',
+  ],
+  env: {
+    API_KEY: '<YOUR_BIRDEYE_API_KEY>',
+  },
+};
+
+function setupMcpConfig(configFile, apiKey) {
+  const configDir = dirname(configFile);
+  mkdirSync(configDir, { recursive: true });
+
+  const mcpEntry = { ...BIRDEYE_MCP_CONFIG };
+  if (apiKey) {
+    mcpEntry.env = { API_KEY: apiKey };
+  }
+
+  if (existsSync(configFile)) {
+    const existing = JSON.parse(readFileSync(configFile, 'utf-8'));
+    if (existing.mcpServers && existing.mcpServers['birdeye-mcp']) {
+      ok('MCP: birdeye-mcp already configured');
+      return;
+    }
+    existing.mcpServers = existing.mcpServers || {};
+    existing.mcpServers['birdeye-mcp'] = mcpEntry;
+    writeFileSync(configFile, JSON.stringify(existing, null, 2) + '\n');
+    ok(`MCP: Added birdeye-mcp to ${configFile.split('/').pop()}`);
+  } else {
+    const config = { mcpServers: { 'birdeye-mcp': mcpEntry } };
+    writeFileSync(configFile, JSON.stringify(config, null, 2) + '\n');
+    ok(`MCP: Created ${configFile.split('/').pop()}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Skill Updates
+// ---------------------------------------------------------------------------
+
+function checkForUpdates() {
+  const config = loadConfig();
+  const versions = loadVersions();
+  const installed = config.installed || {};
+
+  console.log('');
+  if (!config.installedAt) {
+    warn('No install record found.');
+    info('Run: npx birdeye-skills install --all');
+    console.log('');
+    return;
+  }
+
+  // TTL check
+  const ageDays = Math.floor((Date.now() - new Date(config.installedAt).getTime()) / 86400000);
+  if (ageDays >= SKILL_TTL_DAYS) {
+    warn(`Skills are ${ageDays} days old (TTL: ${SKILL_TTL_DAYS} days) — update recommended`);
+    info('Run: npx birdeye-skills@latest install --all');
+  } else {
+    ok(`Skills are fresh — installed ${ageDays} day(s) ago (TTL: ${SKILL_TTL_DAYS} days)`);
+  }
+  console.log('');
+
+  // Version check
+  let updatesAvailable = 0;
+  for (const [skill, skillInfo] of Object.entries(installed)) {
+    const latestVersion = versions[skill];
+    if (!latestVersion) continue;
+    if (skillInfo.version !== latestVersion) {
+      info(`${skill}: ${skillInfo.version} → ${latestVersion}`);
+      updatesAvailable++;
+    } else {
+      ok(`${skill}: ${skillInfo.version}`);
+    }
+  }
+
+  if (updatesAvailable > 0) {
+    console.log('');
+    warn(`${updatesAvailable} update(s) available — run: birdeye-skills update`);
+  }
+
+  config.lastCheck = new Date().toISOString();
+  saveConfig(config);
+  console.log('');
+}
+
+function updateAll() {
+  const config = loadConfig();
+  const installed = config.installed || {};
+
+  if (Object.keys(installed).length === 0) {
+    warn('No skills installed.');
+    info("Run: birdeye-skills install --all");
+    return;
+  }
+
+  console.log('');
+  let updated = 0;
+  for (const [skill, skillInfo] of Object.entries(installed)) {
+    const platform = skillInfo.platform || 'claude';
+    const targetBase = platform === 'claude' ? dirname(skillInfo.path) : skillInfo.path;
+    if (platform === 'cursor') {
+      if (installSkillCursor(skill, targetBase)) updated++;
+    } else {
+      if (installSkillClaude(skill, targetBase, skillInfo.mode)) updated++;
+    }
+  }
+
+  console.log('');
+  ok(`${updated} skill(s) updated`);
+  console.log('');
+}
+
+// ---------------------------------------------------------------------------
+// Listing
+// ---------------------------------------------------------------------------
+
+function listSkills() {
+  const config = loadConfig();
+  const installed = config.installed || {};
+  const versions = loadVersions();
+
+  console.log('');
+  if (Object.keys(installed).length === 0) {
+    warn('No skills installed.');
+    info("Run: birdeye-skills install --all");
+    console.log('');
+    return;
+  }
+
+  for (const [skill, skillInfo] of Object.entries(installed)) {
+    const latest = versions[skill] || '?';
+    const outdated = skillInfo.version !== latest ? ` ${C.yellow}→ ${latest}${C.reset}` : '';
+    const platform = skillInfo.platform ? ` ${C.dim}[${skillInfo.platform}]${C.reset}` : '';
+    const ageDays = Math.floor((Date.now() - new Date(skillInfo.installedAt).getTime()) / 86400000);
+    const aged = ageDays >= SKILL_TTL_DAYS ? ` ${C.yellow}(${ageDays}d old)${C.reset}` : '';
+    ok(`${skill} v${skillInfo.version}${outdated}${platform}${aged}`);
+  }
+
+  console.log('');
+  for (const skill of ALL_SKILLS) {
+    if (!installed[skill]) skip(skill);
+  }
+
+  if (config.lastCheck) {
+    console.log('');
+    console.log(`  ${C.dim}Last check: ${new Date(config.lastCheck).toLocaleString()}${C.reset}`);
+  }
+}
+
+function showSkillInfo(skillName) {
+  const srcDir = join(LOCAL_SKILLS_DIR, skillName);
+  const skillMdPath = join(srcDir, 'SKILL.md');
+
+  if (!existsSync(skillMdPath)) {
+    console.error(`Skill '${skillName}' not found.`);
+    console.log('\nAvailable skills:');
+    ALL_SKILLS.forEach(s => console.log(`  - ${s}`));
+    return;
+  }
+
+  const content = readFileSync(skillMdPath, 'utf-8');
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (match) {
+    console.log(`\n${match[1]}`);
+  }
+
+  const refsDir = join(srcDir, 'references');
+  if (existsSync(refsDir)) {
+    const refs = readdirSync(refsDir).filter(f => f.endsWith('.md'));
+    console.log(`\nReference files (${refs.length}):`);
+    refs.forEach(r => console.log(`  - ${r}`));
+  }
+}
+
+
+function pullLatest() {
+  console.log('');
+  info('Fetching latest birdeye-skills from npm...');
+  console.log('');
+  try {
+    execSync('npx birdeye-skills@latest install --all', { stdio: 'inherit' });
+  } catch (err) {
+    console.error('');
+    console.error(`  ${C.red}✗${C.reset}  Update failed: ${err.message}`);
+    info('Manual: npx birdeye-skills@latest install --all');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Docs Sync
+// ---------------------------------------------------------------------------
+
+function docsSync() {
+  console.log('\n=== Birdeye API Docs Sync ===\n');
+  console.log('This command checks for new Birdeye API endpoints and updates skill references.\n');
+
+  const versionsPath = join(LOCAL_SKILLS_DIR, 'versions.json');
+  if (!existsSync(versionsPath)) {
+    console.error('Error: versions.json not found. Make sure you\'re in the birdeye-skills directory.');
+    return;
+  }
+
+  console.log('Steps to sync new API endpoints:\n');
+  console.log('  1. Check https://docs.birdeye.so/reference for new endpoints');
+  console.log('  2. Identify which domain skill the endpoint belongs to');
+  console.log('  3. Update the skill\'s references/operation-map.md');
+  console.log('  4. Bump version in versions.json');
+  console.log('  5. Run: birdeye-skills update');
+  console.log('');
+  console.log('Skill → API Group mapping:');
+  console.log('  birdeye-market-data        → Price, OHLCV, Stats, History');
+  console.log('  birdeye-token-discovery    → Token List, Search, Trending, Meme');
+  console.log('  birdeye-transaction-flow   → Transactions, Transfers, Blockchain');
+  console.log('  birdeye-wallet-intelligence → Wallet, PnL, Top Traders');
+  console.log('  birdeye-holder-analysis    → Holder');
+  console.log('  birdeye-security-analysis  → Security');
+  console.log('  birdeye-smart-money        → Smart Money');
+  console.log('  birdeye-realtime-streams   → WebSocket channels');
+}
+
+// ---------------------------------------------------------------------------
+// CLI Entry Point
+// ---------------------------------------------------------------------------
+
+function printHelp() {
+  console.log(`
+Birdeye Skills CLI — Manage Birdeye AI skills
+
+Usage:
+  birdeye-skills <command> [options]
+
+Commands:
+  install [options]       Install skills to AI assistants
+
+  Platform targets:
+    --claude              Install for Claude Code (default)
+    --cursor              Install for Cursor (.cursor/rules/*.mdc)
+    --codex               Generate AGENTS.md for OpenAI Codex CLI
+    --bundle [file]       Generate bundled prompt for ChatGPT / OpenAI API
+    --chatgpt             Alias for --bundle
+
+  Skill selection:
+    --all                 Install all 13 skills
+    --domain              Install domain skills only (router + 8)
+    --workflow            Install workflow skills only (4)
+    <skill-name>          Install a specific skill
+
+  Target:
+    --project <dir>       Install to a specific project
+    --path <dir>          Install to custom directory
+
+  MCP config:
+    --api-key <key>       Set Birdeye API key in MCP config
+    --skip-mcp            Skip auto MCP config generation
+
+  update                  Update all installed skills to latest version
+  pull                    Pull latest skills from registry and update
+  check                   Check for available updates
+  list                    List all skills and their install status
+  info <skill-name>       Show details about a specific skill
+  docs sync               Show guide for syncing new API endpoints
+  cache clear             Clear cached metadata
+
+Examples:
+  birdeye-skills install --all                              # Claude Code personal
+  birdeye-skills install --all --project /path/to/app       # Claude Code project
+  birdeye-skills install --cursor --all --project /path     # Cursor rules
+  birdeye-skills install --codex --all --project /path      # Codex AGENTS.md
+  birdeye-skills install --bundle                           # Bundled prompt file
+  birdeye-skills install --bundle my-prompt.md --domain     # Custom file, domain only
+  birdeye-skills install birdeye-market-data                # Single skill
+  birdeye-skills install --all --project . --api-key KEY    # With API key in MCP config
+  birdeye-skills install --all --project . --skip-mcp       # Skip MCP config setup
+  birdeye-skills update                                     # Update installed skills
+  birdeye-skills pull                                       # Pull latest + update
+`);
+}
+
+function main() {
+  const args = process.argv.slice(2);
+
+  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+    printHelp();
+    return;
+  }
+
+  const command = args[0];
+
+  switch (command) {
+    case 'install': {
+      let targetBase = CLAUDE_SKILLS_DIR;
+      let mode = 'personal';
+      let platform = 'claude';
+      let skillsToInstall = [];
+      let projectDir = '';
+      let bundleOutput = 'birdeye-system-prompt.md';
+      let apiKey = '';
+      let skipMcp = false;
+
+      for (let i = 1; i < args.length; i++) {
+        switch (args[i]) {
+          case '--all':
+            skillsToInstall = [...ALL_SKILLS];
+            break;
+          case '--domain':
+            skillsToInstall = ['birdeye-router', ...DOMAIN_SKILLS];
+            break;
+          case '--workflow':
+            skillsToInstall = [...WORKFLOW_SKILLS];
+            break;
+          case '--claude':
+            platform = 'claude';
+            break;
+          case '--cursor':
+            platform = 'cursor';
+            break;
+          case '--codex':
+            platform = 'codex';
+            break;
+          case '--bundle':
+            platform = 'bundle';
+            if (args[i + 1] && !args[i + 1].startsWith('-')) {
+              bundleOutput = args[++i];
+            }
+            break;
+          case '--chatgpt':
+            platform = 'bundle';
+            break;
+          case '--api-key':
+            if (!args[i + 1] || args[i + 1].startsWith('-')) {
+              console.error('Error: --api-key requires a key argument.');
+              return;
+            }
+            apiKey = args[++i];
+            break;
+          case '--skip-mcp':
+            skipMcp = true;
+            break;
+          case '--project':
+            if (!args[i + 1] || args[i + 1].startsWith('-')) {
+              console.error('Error: --project requires a directory argument.');
+              console.error('Usage: birdeye-skills install --all --project /path/to/your-project');
+              return;
+            }
+            projectDir = resolve(args[++i]);
+            if (!existsSync(projectDir)) {
+              console.error(`Error: project directory does not exist: ${projectDir}`);
+              return;
+            }
+            break;
+          case '--path':
+            targetBase = resolve(args[++i]);
+            mode = 'custom';
+            break;
+          default:
+            if (ALL_SKILLS.includes(args[i])) {
+              skillsToInstall.push(args[i]);
+            } else {
+              console.error(`Unknown option or skill: ${args[i]}`);
+              console.log('Available skills:', ALL_SKILLS.join(', '));
+              return;
+            }
+        }
+      }
+
+      if (skillsToInstall.length === 0) {
+        console.log('Specify skills to install:');
+        console.log('  birdeye-skills install --all');
+        console.log('  birdeye-skills install --domain');
+        console.log('  birdeye-skills install birdeye-market-data');
+        return;
+      }
+
+      // Resolve target based on platform
+      switch (platform) {
+        case 'claude':
+          if (mode !== 'custom') {
+            targetBase = projectDir
+              ? join(projectDir, '.claude', 'skills')
+              : CLAUDE_SKILLS_DIR;
+            mode = projectDir ? `claude project (${projectDir})` : 'claude personal';
+          }
+          break;
+        case 'cursor':
+          if (!projectDir) {
+            console.error('Error: --cursor requires --project /path/to/your-project');
+            console.error('Cursor rules are project-scoped.');
+            return;
+          }
+          targetBase = join(projectDir, '.cursor', 'rules');
+          mode = `cursor (${projectDir})`;
+          break;
+        case 'codex':
+          if (!projectDir) {
+            console.error('Error: --codex requires --project /path/to/your-project');
+            console.error('AGENTS.md is project-scoped.');
+            return;
+          }
+          targetBase = projectDir;
+          mode = `codex (${projectDir})`;
+          break;
+        case 'bundle':
+          mode = `bundle → ${bundleOutput}`;
+          break;
+      }
+
+      console.log('');
+      console.log(`${C.bold}Birdeye Skills${C.reset}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`  ${C.dim}Platform${C.reset}  ${C.cyan}${platform}${C.reset}`);
+      console.log(`  ${C.dim}Target${C.reset}    ${C.cyan}${mode}${C.reset}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('');
+
+      let installed = 0;
+
+      switch (platform) {
+        case 'claude':
+          for (const skill of skillsToInstall) {
+            if (installSkillClaude(skill, targetBase, mode)) installed++;
+          }
+          break;
+        case 'cursor':
+          for (const skill of skillsToInstall) {
+            if (installSkillCursor(skill, targetBase)) installed++;
+          }
+          break;
+        case 'codex':
+          installed = installSkillsCodex(skillsToInstall, targetBase);
+          break;
+        case 'bundle':
+          installed = installSkillsBundle(skillsToInstall, bundleOutput);
+          break;
+      }
+
+      console.log('');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      if (installed === skillsToInstall.length) {
+        ok(`${C.bold}${installed}/${skillsToInstall.length} skills installed${C.reset}`);
+      } else {
+        warn(`${installed}/${skillsToInstall.length} skills installed`);
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      // Write install timestamp to config
+      const cfg = loadConfig();
+      cfg.installedAt = new Date().toISOString();
+      saveConfig(cfg);
+
+      // Set up MCP config for project installs
+      if (!skipMcp && platform !== 'bundle') {
+        console.log('');
+        switch (platform) {
+          case 'claude':
+            if (projectDir) setupMcpConfig(join(projectDir, '.mcp.json'), apiKey);
+            break;
+          case 'cursor':
+            setupMcpConfig(
+              projectDir ? join(projectDir, '.cursor', 'mcp.json') : join(HOME, '.cursor', 'mcp.json'),
+              apiKey
+            );
+            break;
+          case 'codex':
+            info('Codex MCP: add birdeye-mcp to ~/.codex/config.toml manually');
+            break;
+        }
+      }
+
+      if (!apiKey && !process.env.BIRDEYE_API_KEY && !skipMcp && platform !== 'bundle') {
+        console.log('');
+        warn('API key not configured');
+        info('Get key: https://bds.birdeye.so → Usages → Security → Generate key');
+        info(`Then: npx birdeye-skills install --all --api-key YOUR_KEY`);
+      }
+
+      console.log('');
+      console.log(`  ${C.dim}Update when needed: npx birdeye-skills@latest install --all${C.reset}`);
+      console.log(`  ${C.dim}Next TTL check:     ${new Date(Date.now() + SKILL_TTL_DAYS * 86400000).toLocaleDateString()}${C.reset}`);
+      console.log('');
+      break;
+    }
+
+    case 'update':
+      updateAll();
+      break;
+
+    case 'pull':
+      pullLatest();
+      break;
+
+    case 'check':
+      checkForUpdates();
+      break;
+
+    case 'list':
+      listSkills();
+      break;
+
+    case 'info':
+      if (args[1]) {
+        showSkillInfo(args[1]);
+      } else {
+        console.log('Usage: birdeye-skills info <skill-name>');
+      }
+      break;
+
+    case 'docs':
+      if (args[1] === 'sync') {
+        docsSync();
+      } else {
+        console.log('Usage: birdeye-skills docs sync');
+      }
+      break;
+
+    case 'cache':
+      if (args[1] === 'clear') {
+        const config = loadConfig();
+        config.lastCheck = null;
+        saveConfig(config);
+        console.log('Cache cleared.');
+      } else {
+        console.log('Usage: birdeye-skills cache clear');
+      }
+      break;
+
+    default:
+      console.error(`Unknown command: ${command}`);
+      printHelp();
+  }
+}
+
+main();

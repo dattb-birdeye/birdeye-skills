@@ -1,0 +1,13 @@
+{
+  "name": "birdeye",
+  "description": "Multi-chain DeFi analytics with Birdeye — token prices, wallet analysis, smart money tracking, real-time streams, and research tools",
+  "version": "1.0.0",
+  "author": {
+    "name": "Birdeye Partners",
+    "url": "https://birdeye.so"
+  },
+  "homepage": "https://docs.birdeye.so",
+  "repository": "https://github.com/birdeye-so/birdeye-skills",
+  "license": "MIT",
+  "keywords": ["birdeye", "solana", "ethereum", "defi", "blockchain", "analytics", "web3"]
+}

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+.env
+.env.*
+*.log
+
+.DS_Store
+
+# Bundle output from install.sh --bundle
+birdeye-system-prompt.md
+
+# Generated — rebuild with: npm run compile-skills
+# skills/   ← intentionally NOT ignored; committed to repo for npx skills add
