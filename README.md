@@ -152,7 +152,7 @@ Once installed, just describe what you want — the router dispatches automatica
 
 ## Updating Skills
 
-Skills have a **30-day TTL**. The router skill checks `~/.birdeye/skills-config.json` and prompts you to update when skills are stale.
+Skills have a **7-day TTL**. The router skill checks `~/.birdeye/skills-config.json` and prompts you to update when skills are stale.
 
 ```bash
 # Pull latest from npm and reinstall

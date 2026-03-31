@@ -21,6 +21,7 @@ import { readFileSync, writeFileSync, mkdirSync, cpSync, existsSync, readdirSync
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { createInterface } from 'readline';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,7 +35,7 @@ const LOCAL_SKILLS_DIR = join(PKG_ROOT, 'skills');
 const HOME = process.env.HOME || process.env.USERPROFILE || '~';
 const CONFIG_DIR = join(HOME, '.birdeye');
 const CONFIG_FILE = join(CONFIG_DIR, 'skills-config.json');
-const SKILL_TTL_DAYS = 30;   // agent warns user to update after this many days
+const SKILL_TTL_DAYS = 7;    // agent warns user to update after this many days
 
 // Colors & icons (disabled when not a TTY)
 const isTTY = process.stdout.isTTY;
@@ -361,6 +362,51 @@ const BIRDEYE_MCP_CONFIG = {
   },
 };
 
+function readApiKey() {
+  return new Promise((resolve) => {
+    if (!process.stdin.isTTY) {
+      resolve('');
+      return;
+    }
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    process.stdout.write(`  ${C.cyan}?${C.reset} Birdeye API key (leave blank to skip): `);
+
+    // Mute output for hidden input
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    let muted = true;
+    process.stdout.write = (chunk, ...rest) => {
+      if (muted && typeof chunk === 'string' && chunk !== '\n' && chunk !== '\r\n') return true;
+      return originalWrite(chunk, ...rest);
+    };
+
+    rl.once('line', (line) => {
+      muted = false;
+      process.stdout.write = originalWrite;
+      process.stdout.write('\n');
+      rl.close();
+      resolve(line.trim());
+    });
+  });
+}
+
+function applyApiKeyToConfig(configFile, key) {
+  try {
+    let cfg = {};
+    if (existsSync(configFile)) {
+      cfg = JSON.parse(readFileSync(configFile, 'utf8'));
+    }
+    cfg.mcpServers = cfg.mcpServers || {};
+    cfg.mcpServers['birdeye-mcp'] = cfg.mcpServers['birdeye-mcp'] || {};
+    cfg.mcpServers['birdeye-mcp'].env = cfg.mcpServers['birdeye-mcp'].env || {};
+    cfg.mcpServers['birdeye-mcp'].env.API_KEY = key;
+    mkdirSync(dirname(configFile), { recursive: true });
+    writeFileSync(configFile, JSON.stringify(cfg, null, 2));
+    ok(`API key saved to ${configFile}`);
+  } catch (e) {
+    warn(`Could not write to ${configFile}: ${e.message}`);
+  }
+}
+
 function setupMcpConfig(configFile, apiKey) {
   const configDir = dirname(configFile);
   mkdirSync(configDir, { recursive: true });
@@ -630,7 +676,7 @@ Examples:
 `);
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
@@ -822,9 +868,22 @@ function main() {
 
       if (!apiKey && !process.env.BIRDEYE_API_KEY && !skipMcp && platform !== 'bundle') {
         console.log('');
-        warn('API key not configured');
-        info('Get key: https://bds.birdeye.so → Usages → Security → Generate key');
-        info(`Then: npx birdeye-skills install --all --api-key YOUR_KEY`);
+        info('Get a free API key at https://bds.birdeye.so → Usages → Security → Generate key');
+        const enteredKey = await readApiKey();
+        if (enteredKey) {
+          let mcpFile;
+          if (platform === 'cursor') {
+            mcpFile = projectDir ? join(projectDir, '.cursor', 'mcp.json') : join(HOME, '.cursor', 'mcp.json');
+          } else if (platform === 'claude' && projectDir) {
+            mcpFile = join(projectDir, '.mcp.json');
+          } else {
+            mcpFile = join(HOME, '.claude', 'settings.json');
+          }
+          applyApiKeyToConfig(mcpFile, enteredKey);
+        } else {
+          warn('No API key set — skills installed but MCP calls will fail');
+          info(`Add later: npx birdeye-skills install --all --api-key YOUR_KEY`);
+        }
       }
 
       console.log('');
