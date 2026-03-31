@@ -1,0 +1,28 @@
+{
+  "name": "birdeye-skills",
+  "version": "1.0.0",
+  "description": "Birdeye DeFi analytics skills for Claude Code, Cursor, Codex CLI, and ChatGPT",
+  "type": "module",
+  "bin": {
+    "birdeye-skills": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    ".claude-plugin/"
+  ],
+  "ttlDays": 7,
+  "keywords": [
+    "birdeye", "solana", "defi", "blockchain", "analytics",
+    "ai", "skills", "claude", "cursor", "mcp", "web3"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/birdeye-so/birdeye-skills"
+  },
+  "homepage": "https://docs.birdeye.so/docs/birdeye-ai",
+  "engines": {
+    "node": ">=18"
+  }
+}
