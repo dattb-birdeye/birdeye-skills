@@ -364,47 +364,23 @@ const BIRDEYE_MCP_CONFIG = {
 
 function readApiKey() {
   return new Promise((resolve) => {
-    if (!process.stdin.isTTY) {
-      resolve('');
-      return;
-    }
+    if (!process.stdin.isTTY) { resolve(''); return; }
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    process.stdout.write(`  ${C.cyan}?${C.reset} Birdeye API key (leave blank to skip): `);
-
-    // Mute output for hidden input
-    const originalWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write(`  ${C.cyan}?${C.reset}  Enter API key now (hidden, Enter to skip): `);
     let muted = true;
+    const origWrite = process.stdout.write.bind(process.stdout);
     process.stdout.write = (chunk, ...rest) => {
       if (muted && typeof chunk === 'string' && chunk !== '\n' && chunk !== '\r\n') return true;
-      return originalWrite(chunk, ...rest);
+      return origWrite(chunk, ...rest);
     };
-
     rl.once('line', (line) => {
       muted = false;
-      process.stdout.write = originalWrite;
-      process.stdout.write('\n');
+      process.stdout.write = origWrite;
+      origWrite('\n');
       rl.close();
       resolve(line.trim());
     });
   });
-}
-
-function applyApiKeyToConfig(configFile, key) {
-  try {
-    let cfg = {};
-    if (existsSync(configFile)) {
-      cfg = JSON.parse(readFileSync(configFile, 'utf8'));
-    }
-    cfg.mcpServers = cfg.mcpServers || {};
-    cfg.mcpServers['birdeye-mcp'] = cfg.mcpServers['birdeye-mcp'] || {};
-    cfg.mcpServers['birdeye-mcp'].env = cfg.mcpServers['birdeye-mcp'].env || {};
-    cfg.mcpServers['birdeye-mcp'].env.API_KEY = key;
-    mkdirSync(dirname(configFile), { recursive: true });
-    writeFileSync(configFile, JSON.stringify(cfg, null, 2));
-    ok(`API key saved to ${configFile}`);
-  } catch (e) {
-    warn(`Could not write to ${configFile}: ${e.message}`);
-  }
 }
 
 function setupMcpConfig(configFile, apiKey) {
@@ -848,17 +824,21 @@ async function main() {
       saveConfig(cfg);
 
       // Set up MCP config for project installs
+      let mcpConfigFile = null;
       if (!skipMcp && platform !== 'bundle') {
         console.log('');
         switch (platform) {
           case 'claude':
-            if (projectDir) setupMcpConfig(join(projectDir, '.mcp.json'), apiKey);
+            mcpConfigFile = projectDir
+              ? join(projectDir, '.mcp.json')
+              : join(HOME, '.claude', 'settings.json');
+            setupMcpConfig(mcpConfigFile, apiKey);
             break;
           case 'cursor':
-            setupMcpConfig(
-              projectDir ? join(projectDir, '.cursor', 'mcp.json') : join(HOME, '.cursor', 'mcp.json'),
-              apiKey
-            );
+            mcpConfigFile = projectDir
+              ? join(projectDir, '.cursor', 'mcp.json')
+              : join(HOME, '.cursor', 'mcp.json');
+            setupMcpConfig(mcpConfigFile, apiKey);
             break;
           case 'codex':
             info('Codex MCP: add birdeye-mcp to ~/.codex/config.toml manually');
@@ -866,23 +846,36 @@ async function main() {
         }
       }
 
+      // Interactive API key prompt when none was supplied
       if (!apiKey && !process.env.BIRDEYE_API_KEY && !skipMcp && platform !== 'bundle') {
         console.log('');
-        info('Get a free API key at https://bds.birdeye.so → Usages → Security → Generate key');
+        info('Get a free API key: https://bds.birdeye.so → Usages → Security → Generate key');
         const enteredKey = await readApiKey();
         if (enteredKey) {
-          let mcpFile;
-          if (platform === 'cursor') {
-            mcpFile = projectDir ? join(projectDir, '.cursor', 'mcp.json') : join(HOME, '.cursor', 'mcp.json');
-          } else if (platform === 'claude' && projectDir) {
-            mcpFile = join(projectDir, '.mcp.json');
-          } else {
-            mcpFile = join(HOME, '.claude', 'settings.json');
+          if (mcpConfigFile) {
+            try {
+              let cfg = {};
+              if (existsSync(mcpConfigFile)) cfg = JSON.parse(readFileSync(mcpConfigFile, 'utf8'));
+              cfg.mcpServers = cfg.mcpServers || {};
+              cfg.mcpServers['birdeye-mcp'] = cfg.mcpServers['birdeye-mcp'] || {};
+              cfg.mcpServers['birdeye-mcp'].env = cfg.mcpServers['birdeye-mcp'].env || {};
+              cfg.mcpServers['birdeye-mcp'].env.API_KEY = enteredKey;
+              writeFileSync(mcpConfigFile, JSON.stringify(cfg, null, 2));
+              ok(`API key saved → ${mcpConfigFile}`);
+            } catch (e) {
+              warn(`Could not write API key: ${e.message}`);
+            }
           }
-          applyApiKeyToConfig(mcpFile, enteredKey);
         } else {
-          warn('No API key set — skills installed but MCP calls will fail');
-          info(`Add later: npx birdeye-skills install --all --api-key YOUR_KEY`);
+          console.log('');
+          info('  To set your API key later:');
+          if (mcpConfigFile) {
+            console.log(`       File: ${mcpConfigFile}`);
+            console.log('');
+            console.log(`       sed -i '' 's|<YOUR_BIRDEYE_API_KEY>|YOUR_KEY|' "${mcpConfigFile}"`);
+          } else {
+            info('  Run: npx birdeye-skills install --all --api-key YOUR_KEY');
+          }
         }
       }
 

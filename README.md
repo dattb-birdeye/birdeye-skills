@@ -342,3 +342,27 @@ Examples:
 **Wallet API**: 30 rpm hard limit regardless of tier.
 
 See [`SYSTEM-PROMPTS.md`](./SYSTEM-PROMPTS.md) for detailed integration architecture.
+
+---
+
+## Local Development
+
+Test changes locally without publishing to npm:
+
+```bash
+# Clone and link globally
+git clone https://github.com/birdeye-so/birdeye-skills.git
+cd birdeye-skills
+npm link
+
+# Now `birdeye-skills` resolves to your local clone
+birdeye-skills install --all
+birdeye-skills install --all --project /path/to/app
+birdeye-skills install --cursor --all
+birdeye-skills check
+
+# Unlink when done
+npm unlink -g birdeye-skills
+```
+
+Edit files under `skills/` or `bin/cli.js`, then re-run commands immediately — no build step needed.
