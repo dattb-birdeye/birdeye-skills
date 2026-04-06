@@ -29,17 +29,7 @@ You are an expert at building token screening and discovery tools using multiple
 | `birdeye-holder-analysis` | Holder distribution and concentration |
 | `birdeye-realtime-streams` | Live new listing and price updates |
 
-## Response Discovery
-
-This workflow composes multiple domain skills. Before writing code that parses API responses:
-
-1. Read the relevant domain skill's `operation-map.md` for the **Docs** URL of each endpoint
-2. **If birdeye-mcp is connected** → call the endpoint directly via MCP tool, inspect the real response
-3. **Otherwise** → WebFetch the Docs URL to get the full response schema from docs.birdeye.so
-4. **CRITICAL**: Key fields in operation maps are approximate hints only and may contain wrong field names. **NEVER use key field names in code without first verifying them via docs**
-
-Code templates below reference response fields illustratively — verify actual field names via docs before use.
-
+> ⚠️ Key fields in operation maps are hints only — verify via docs before parsing responses. Code templates below reference response fields illustratively — verify actual field names via docs before use.
 ## Workflow: Build Token Screener
 
 ### Step 1: Define Screening Criteria

@@ -1,9 +1,5 @@
 # Market Data — Operation Map
 
-All responses are wrapped in `{ "data": { ... }, "success": true }`.
-
-> **IMPORTANT**: Key fields listed below are approximate hints only — they may contain inaccurate field names. **ALWAYS WebFetch the Docs URL** for each endpoint to get the actual response schema before writing code that parses API responses. Do NOT trust key field hints as authoritative.
-
 ## Price Endpoints
 
 ### GET /defi/price

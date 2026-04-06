@@ -10,30 +10,7 @@ metadata:
 
 You are an expert at building real-time data pipelines using Birdeye WebSocket API. This skill covers all 9 subscription channels for live market data.
 
-## Prerequisites
-
-### API Key
-WebSocket connection requires API key. Get one at https://bds.birdeye.so.
-
-### Plan Requirements
-WebSocket access requires **Business tier or higher**.
-
-### WebSocket URL
-
-The chain name is part of the URL path — NOT a query param or header:
-
-```
-wss://public-api.birdeye.so/socket/solana?x-api-key=YOUR_API_KEY
-```
-
-For other chains, replace `solana` in the path: `/socket/ethereum`, `/socket/bsc`, `/socket/arbitrum`, `/socket/base`, etc.
-
-### Required Headers
-```
-Origin: ws://public-api.birdeye.so
-Sec-WebSocket-Origin: ws://public-api.birdeye.so
-Sec-WebSocket-Protocol: echo-protocol
-```
+> ⚠️ Requires **Business tier+** | URL: `wss://public-api.birdeye.so/socket/{chain}?x-api-key=KEY` (chain in path, not header) | Headers: `Origin: ws://public-api.birdeye.so`, `Sec-WebSocket-Protocol: echo-protocol`
 
 ## Routing
 
@@ -51,13 +28,6 @@ Sec-WebSocket-Protocol: echo-protocol
 | Connection patterns | `references/subscription-patterns.md` |
 | Reconnection handling | `references/reconnection-handling.md` |
 | Common mistakes & gotchas | `references/caveats.md` |
-
-## Response Discovery
-
-Each stream channel in the stream map includes a **Docs** URL. Before writing code that handles WebSocket messages:
-
-1. **WebFetch the Docs URL** to get the full message schema from docs.birdeye.so
-2. **Key fields** listed in the stream map give you a quick overview of each event type
 
 ## Rules
 

@@ -117,111 +117,17 @@ wss://public-api.birdeye.so/socket/{chain}
 
 ### Rate Limits
 
-| Tier | Rate Limit | WebSocket |
-|---|---|---|
-| Standard | 1 rps | No |
-| Lite | 15 rps | No |
-| Starter | 15 rps | No |
-| Premium | 50 rps / 1000 rpm | No |
-| Business | 100 rps / 1500 rpm | Yes |
-| Enterprise | Custom | Yes |
+Standard: 1 rps | Lite/Starter: 15 rps | Premium: 50 rps | Business: 100 rps | Enterprise: custom. WebSocket requires Business+. Wallet API: 30 rpm hard limit on all tiers.
 
-Wallet API group is limited to 30 rpm regardless of tier.
+## Response Discovery
 
-## Response Discovery Protocol
+Each endpoint in domain skills has a **Docs** URL. Before writing code that parses API responses:
 
-Domain skills provide endpoint paths, parameters, and key field hints. Each endpoint includes a **Docs** URL pointing to the official API documentation. **Before generating code that parses API responses, ALWAYS verify the actual response schema** using one of these methods (in priority order):
+1. **`birdeye-mcp` connected** → call the endpoint via MCP tool, use the real response to understand schema
+2. **`birdeye-api-docs` connected** → use `birdeye_get_endpoint_info` / `birdeye_search_endpoints`
+3. **No MCP** → WebFetch the Docs URL from the operation-map, or do a minimal live curl call
 
-### Method 1: Official Birdeye MCP (best — call API directly via MCP tools)
-
-Birdeye provides an official MCP server at `https://mcp.birdeye.so/mcp` (currently in Beta).
-When the `birdeye-mcp` server is connected, the AI can call Birdeye API endpoints directly as MCP tools — no manual curl needed.
-
-**Setup** (add to MCP config):
-```json
-{
-  "mcpServers": {
-    "birdeye-mcp": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote@0.1.38",
-        "https://mcp.birdeye.so/mcp",
-        "--header",
-        "x-api-key:${API_KEY}"
-      ],
-      "env": {
-        "API_KEY": "<YOUR_BIRDEYE_API_KEY>"
-      }
-    }
-  }
-}
-```
-
-**Available endpoints via MCP** (21 tools):
-- `GET /defi/price` — Current token price
-- `GET /defi/history_price` — Historical pricing
-- `GET /defi/v3/ohlcv` — OHLCV candles
-- `GET /defi/token_overview` — Token statistics
-- `GET /defi/token_security` — Security/risk assessment
-- `GET /defi/v3/search` — Token/market search
-- `GET /defi/networks` — Supported networks
-- `GET /wallet/v2/current-net-worth` — Wallet net worth
-- And more...
-
-**Usage**: Call the MCP tool directly. The response IS the real API response — use it to understand the schema and build your code.
-
-### Method 2: Docs Companion MCP (optional — endpoint discovery & CU costs)
-
-If `birdeye-api-docs` companion server is connected, use these lookup tools:
-
-| Tool | Purpose |
-|---|---|
-| `birdeye_get_endpoint_info` | Get docs, params, CU cost, docs URL for an endpoint |
-| `birdeye_search_endpoints` | Search endpoints by keyword (e.g., "token price") |
-| `birdeye_list_endpoints` | List all endpoints grouped by domain |
-
-This server does NOT make API calls — it provides documentation and discovery. Use with Method 1 for the best experience.
-
-### Method 3: Live Test Call (reliable — no MCP needed)
-
-Make a minimal API call to inspect the actual response:
-
-```bash
-# Inspect real response shape
-curl -s \
-  -H "X-API-KEY: $BIRDEYE_API_KEY" \
-  -H "x-chain: solana" \
-  "https://public-api.birdeye.so/defi/price?address=So11111111111111111111111111111111111111112" \
-  | python3 -m json.tool | head -30
-```
-
-Rules for test calls:
-- Use `limit=1` or minimal parameters to keep response small
-- Use a well-known token address (SOL: `So11111111111111111111111111111111111111112`)
-- Inspect the response structure before writing parsing code
-- This costs real CU — use sparingly, cache the shape mentally
-
-### Method 4: WebSearch Documentation (fallback)
-
-Search Birdeye's official API docs:
-
-```
-WebSearch: "birdeye api {endpoint_path} response schema site:docs.birdeye.so"
-WebFetch:  https://docs.birdeye.so/reference
-Birdeye AI docs: https://docs.birdeye.so/docs/birdeye-ai
-```
-
-### Method 5: Key Fields in Operation Map (quick reference)
-
-Each endpoint in the skill's operation map includes **Key fields** — a compact summary of the most important response fields. Use this for a quick overview, but always verify against the full docs for complete schema.
-
-### When to Discover
-
-- **ALWAYS** before generating response parsing/handling code
-- When a user asks about specific response fields
-- When the key fields summary seems incomplete
-- When switching between V1/V2/V3 endpoints (response shapes differ)
+⚠️ Key fields in operation-map are approximate hints only — **always verify** before writing response-parsing code.
 
 ## Rules
 
