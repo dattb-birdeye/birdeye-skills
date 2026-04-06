@@ -50,9 +50,11 @@ const warn = (m) => console.log(`  ${C.yellow}⚠${C.reset}  ${m}`);
 const info = (m) => console.log(`  ${C.cyan}→${C.reset}  ${m}`);
 const skip = (m) => console.log(`  ${C.dim}–  ${m}${C.reset}`);
 
-const CLAUDE_SKILLS_DIR = join(HOME, '.claude', 'skills');
-const CURSOR_RULES_DIR  = join(HOME, '.cursor', 'rules');
-const CODEX_DIR         = join(HOME, '.codex');
+const CLAUDE_SKILLS_DIR    = join(HOME, '.claude', 'skills');
+const CURSOR_RULES_DIR     = join(HOME, '.cursor', 'rules');
+const CODEX_DIR            = join(HOME, '.codex');
+const DOCS_MCP_DIR         = join(PKG_ROOT, 'birdeye-mcp');
+const DOCS_MCP_INDEX       = join(DOCS_MCP_DIR, 'index.js');
 
 const ALL_SKILLS = [
   'birdeye-router',
@@ -409,6 +411,43 @@ function setupMcpConfig(configFile, apiKey) {
     writeFileSync(configFile, JSON.stringify(config, null, 2) + '\n');
     ok(`MCP: Created ${configFile.split('/').pop()}`);
   }
+}
+
+function setupDocsMcp(configFile) {
+  if (!existsSync(DOCS_MCP_INDEX)) {
+    skip('birdeye-api-docs: birdeye-mcp/index.js not found — skipping');
+    return;
+  }
+
+  // npm install if node_modules missing
+  const nodeModules = join(DOCS_MCP_DIR, 'node_modules');
+  if (!existsSync(nodeModules)) {
+    info('birdeye-api-docs: running npm install in birdeye-mcp/ ...');
+    try {
+      execSync('npm install --prefer-offline', { cwd: DOCS_MCP_DIR, stdio: 'pipe' });
+    } catch (e) {
+      warn(`birdeye-api-docs: npm install failed — ${e.message}`);
+      return;
+    }
+  }
+
+  // Patch MCP config
+  const configDir = dirname(configFile);
+  mkdirSync(configDir, { recursive: true });
+
+  let cfg = {};
+  if (existsSync(configFile)) {
+    try { cfg = JSON.parse(readFileSync(configFile, 'utf-8')); } catch { cfg = {}; }
+    if (cfg.mcpServers?.['birdeye-api-docs']) {
+      ok('MCP: birdeye-api-docs already configured');
+      return;
+    }
+  }
+
+  cfg.mcpServers = cfg.mcpServers || {};
+  cfg.mcpServers['birdeye-api-docs'] = { command: 'node', args: [DOCS_MCP_INDEX] };
+  writeFileSync(configFile, JSON.stringify(cfg, null, 2) + '\n');
+  ok(`MCP: Added birdeye-api-docs to ${configFile.split('/').pop()}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -859,22 +898,22 @@ async function main() {
       let mcpConfigFile = null;
       if (!skipMcp && platform !== 'bundle') {
         console.log('');
-        switch (platform) {
-          case 'claude':
-            mcpConfigFile = projectDir
-              ? join(projectDir, '.mcp.json')
-              : join(HOME, '.claude', 'settings.json');
-            setupMcpConfig(mcpConfigFile, apiKey);
-            break;
-          case 'cursor':
-            mcpConfigFile = projectDir
-              ? join(projectDir, '.cursor', 'mcp.json')
-              : join(HOME, '.cursor', 'mcp.json');
-            setupMcpConfig(mcpConfigFile, apiKey);
-            break;
-          case 'codex':
-            info('Codex MCP: add birdeye-mcp to ~/.codex/config.toml manually');
-            break;
+        if (platform === 'all' || platform === 'claude') {
+          const claudeMcp = projectDir
+            ? join(projectDir, '.mcp.json')
+            : join(HOME, '.claude', 'claude_desktop_config.json');
+          setupMcpConfig(claudeMcp, apiKey);
+          setupDocsMcp(claudeMcp);
+        }
+        if (platform === 'all' || platform === 'cursor') {
+          const cursorMcp = projectDir
+            ? join(projectDir, '.cursor', 'mcp.json')
+            : join(HOME, '.cursor', 'mcp.json');
+          setupMcpConfig(cursorMcp, apiKey);
+          setupDocsMcp(cursorMcp);
+        }
+        if (platform === 'all' || platform === 'codex') {
+          info('Codex MCP: add birdeye-mcp to ~/.codex/config.toml manually');
         }
       }
 
