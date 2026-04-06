@@ -1,0 +1,4 @@
+birdeye-mcp/node_modules/
+birdeye-system-prompt.md
+*.log
+.DS_Store
