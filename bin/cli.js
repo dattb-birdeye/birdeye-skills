@@ -51,6 +51,8 @@ const info = (m) => console.log(`  ${C.cyan}→${C.reset}  ${m}`);
 const skip = (m) => console.log(`  ${C.dim}–  ${m}${C.reset}`);
 
 const CLAUDE_SKILLS_DIR = join(HOME, '.claude', 'skills');
+const CURSOR_RULES_DIR  = join(HOME, '.cursor', 'rules');
+const CODEX_DIR         = join(HOME, '.codex');
 
 const ALL_SKILLS = [
   'birdeye-router',
@@ -666,7 +668,7 @@ async function main() {
     case 'install': {
       let targetBase = CLAUDE_SKILLS_DIR;
       let mode = 'personal';
-      let platform = 'claude';
+      let platform = 'all';       // default: install for all agents
       let skillsToInstall = [];
       let projectDir = '';
       let bundleOutput = 'birdeye-system-prompt.md';
@@ -739,41 +741,33 @@ async function main() {
         }
       }
 
+      // Default: install all skills
       if (skillsToInstall.length === 0) {
-        console.log('Specify skills to install:');
-        console.log('  birdeye-skills install --all');
-        console.log('  birdeye-skills install --domain');
-        console.log('  birdeye-skills install birdeye-market-data');
-        return;
+        skillsToInstall = [...ALL_SKILLS];
       }
 
-      // Resolve target based on platform
+      // Resolve targets
+      const claudeTarget = projectDir ? join(projectDir, '.claude', 'skills') : CLAUDE_SKILLS_DIR;
+      const cursorTarget = projectDir ? join(projectDir, '.cursor', 'rules') : CURSOR_RULES_DIR;
+      const codexTarget  = projectDir || CODEX_DIR;
+
       switch (platform) {
+        case 'all':
+          mode = projectDir ? `all agents — project (${projectDir})` : 'all agents — global';
+          break;
         case 'claude':
           if (mode !== 'custom') {
-            targetBase = projectDir
-              ? join(projectDir, '.claude', 'skills')
-              : CLAUDE_SKILLS_DIR;
+            targetBase = claudeTarget;
             mode = projectDir ? `claude project (${projectDir})` : 'claude personal';
           }
           break;
         case 'cursor':
-          if (!projectDir) {
-            console.error('Error: --cursor requires --project /path/to/your-project');
-            console.error('Cursor rules are project-scoped.');
-            return;
-          }
-          targetBase = join(projectDir, '.cursor', 'rules');
-          mode = `cursor (${projectDir})`;
+          targetBase = cursorTarget;
+          mode = projectDir ? `cursor project (${projectDir})` : 'cursor global';
           break;
         case 'codex':
-          if (!projectDir) {
-            console.error('Error: --codex requires --project /path/to/your-project');
-            console.error('AGENTS.md is project-scoped.');
-            return;
-          }
-          targetBase = projectDir;
-          mode = `codex (${projectDir})`;
+          targetBase = codexTarget;
+          mode = projectDir ? `codex project (${projectDir})` : 'codex global';
           break;
         case 'bundle':
           mode = `bundle → ${bundleOutput}`;
@@ -783,38 +777,76 @@ async function main() {
       console.log('');
       console.log(`${C.bold}Birdeye Skills${C.reset}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`  ${C.dim}Platform${C.reset}  ${C.cyan}${platform}${C.reset}`);
-      console.log(`  ${C.dim}Target${C.reset}    ${C.cyan}${mode}${C.reset}`);
+      if (platform === 'all') {
+        console.log(`  ${C.dim}Claude${C.reset}   → ${claudeTarget}`);
+        console.log(`  ${C.dim}Cursor${C.reset}   → ${cursorTarget}`);
+        console.log(`  ${C.dim}Codex${C.reset}    → ${join(codexTarget, 'AGENTS.md')}`);
+      } else {
+        console.log(`  ${C.dim}Platform${C.reset}  ${C.cyan}${platform}${C.reset}`);
+        console.log(`  ${C.dim}Target${C.reset}    ${C.cyan}${mode}${C.reset}`);
+      }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('');
 
       let installed = 0;
+      const n = skillsToInstall.length;
 
-      switch (platform) {
-        case 'claude':
-          for (const skill of skillsToInstall) {
-            if (installSkillClaude(skill, targetBase, mode)) installed++;
-          }
-          break;
-        case 'cursor':
-          for (const skill of skillsToInstall) {
-            if (installSkillCursor(skill, targetBase)) installed++;
-          }
-          break;
-        case 'codex':
-          installed = installSkillsCodex(skillsToInstall, targetBase);
-          break;
-        case 'bundle':
-          installed = installSkillsBundle(skillsToInstall, bundleOutput);
-          break;
+      if (platform === 'all') {
+        // Claude
+        let c = 0;
+        for (const skill of skillsToInstall) {
+          if (installSkillClaude(skill, claudeTarget, 'claude')) c++;
+        }
+        console.log('');
+        c === n ? ok(`Claude  ${c}/${n}`) : warn(`Claude  ${c}/${n}`);
+
+        // Cursor
+        let cu = 0;
+        console.log('');
+        for (const skill of skillsToInstall) {
+          if (installSkillCursor(skill, cursorTarget)) cu++;
+        }
+        console.log('');
+        cu === n ? ok(`Cursor  ${cu}/${n}`) : warn(`Cursor  ${cu}/${n}`);
+
+        // Codex
+        console.log('');
+        const cx = installSkillsCodex(skillsToInstall, codexTarget);
+        console.log('');
+        cx > 0 ? ok(`Codex   ${cx}/${n} → AGENTS.md`) : warn(`Codex   failed`);
+
+        installed = c + cu + (cx ? 1 : 0);
+      } else {
+        switch (platform) {
+          case 'claude':
+            for (const skill of skillsToInstall) {
+              if (installSkillClaude(skill, targetBase, mode)) installed++;
+            }
+            break;
+          case 'cursor':
+            for (const skill of skillsToInstall) {
+              if (installSkillCursor(skill, targetBase)) installed++;
+            }
+            break;
+          case 'codex':
+            installed = installSkillsCodex(skillsToInstall, targetBase);
+            break;
+          case 'bundle':
+            installed = installSkillsBundle(skillsToInstall, bundleOutput);
+            break;
+        }
       }
 
       console.log('');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      if (installed === skillsToInstall.length) {
-        ok(`${C.bold}${installed}/${skillsToInstall.length} skills installed${C.reset}`);
+      if (platform !== 'all') {
+        if (installed === n) {
+          ok(`${C.bold}${installed}/${n} skills installed${C.reset}`);
+        } else {
+          warn(`${installed}/${n} skills installed`);
+        }
       } else {
-        warn(`${installed}/${skillsToInstall.length} skills installed`);
+        ok(`${C.bold}All agents configured${C.reset}`);
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 

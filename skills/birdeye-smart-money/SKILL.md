@@ -10,18 +10,7 @@ metadata:
 
 You are an expert at tracking smart money activity using Birdeye APIs. This skill covers smart money wallet identification, their token holdings, and trading signals.
 
-## Prerequisites
-
-### API Key
-All requests require `X-API-KEY` header. Get one at https://bds.birdeye.so.
-
-### Chain Selection
-Set `x-chain` header. Default: `solana`.
-
-### Base URL
-```
-https://public-api.birdeye.so
-```
+> `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
 ## Routing
 
@@ -30,14 +19,6 @@ https://public-api.birdeye.so
 | Smart money token list | `references/operation-map.md` → Smart Money Token List |
 | Smart money signal interpretation | `references/signal-patterns.md` |
 | Common issues | `references/caveats.md` |
-
-## Response Discovery
-
-Each endpoint in the operation map includes a **Docs** URL. Before writing code that parses API responses:
-
-1. **If birdeye-mcp is connected** → call the endpoint directly via MCP tool, inspect the real response
-2. **Otherwise** → WebFetch the Docs URL to get the full response schema from docs.birdeye.so
-3. **CRITICAL**: Key fields listed in the operation map are approximate hints only and may contain wrong field names. **NEVER use key field names in code without first verifying them via docs**. Agents that skip verification will generate broken code with non-existent fields.
 
 ## Rules
 

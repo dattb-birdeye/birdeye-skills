@@ -10,18 +10,7 @@ metadata:
 
 You are an expert at querying and composing Birdeye market data APIs. This skill covers all price, OHLCV, statistics, and historical data endpoints.
 
-## Prerequisites
-
-### API Key
-All requests require `X-API-KEY` header. If not configured, direct user to https://bds.birdeye.so to generate one.
-
-### Chain Selection
-Set `x-chain` header per request. Default: `solana`.
-
-### Base URL
-```
-https://public-api.birdeye.so
-```
+> `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
 ## Routing
 
@@ -37,14 +26,6 @@ Read the relevant reference file before implementing:
 | Pair overview, pair stats | `references/operation-map.md` → Pair endpoints |
 | Trade data, liquidity analysis | `references/operation-map.md` → Trade/Liquidity endpoints |
 | Common issues and edge cases | `references/caveats.md` |
-
-## Response Discovery
-
-Each endpoint in the operation map includes a **Docs** URL. Before writing code that parses API responses:
-
-1. **If birdeye-mcp is connected** → call the endpoint directly via MCP tool, inspect the real response
-2. **Otherwise** → WebFetch the Docs URL to get the full response schema from docs.birdeye.so
-3. **CRITICAL**: Key fields listed in the operation map are approximate hints only and may contain wrong field names. **NEVER use key field names in code without first verifying them via docs**. Agents that skip verification will generate broken code with non-existent fields.
 
 ## Rules
 

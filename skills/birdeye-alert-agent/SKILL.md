@@ -30,17 +30,7 @@ You are an expert at building real-time alert systems using Birdeye WebSocket st
 | `birdeye-transaction-flow` | Trade data enrichment |
 | `birdeye-security-analysis` | Auto-screening new tokens |
 
-## Response Discovery
-
-This workflow composes multiple domain skills. Before writing code that parses API responses or WebSocket events:
-
-1. Read the relevant domain skill's `operation-map.md` or `stream-map.md` for the **Docs** URL
-2. **If birdeye-mcp is connected** → call REST endpoints directly via MCP tool, inspect the real response
-3. **Otherwise** → WebFetch the Docs URL to get the full response/event schema from docs.birdeye.so
-4. **CRITICAL**: Key fields in operation maps are approximate hints only and may contain wrong field names. **NEVER use key field names in code without first verifying them via docs**
-
-Code templates below reference response fields illustratively — verify actual field names via docs before use.
-
+> ⚠️ Key fields in operation maps are hints only — verify via docs before parsing responses. Code templates below reference response fields illustratively — verify actual field names via docs before use.
 ## Alert Types
 
 ### 1. Price Alert

@@ -294,10 +294,11 @@ npx birdeye-skills <command> [options]
 Commands:
   install [options]       Install skills
 
-  Platform:
-    --claude              Claude Code (default)
-    --cursor              Cursor (.mdc rules)
-    --codex               Codex CLI (AGENTS.md)
+  Platform (default: all agents):
+    (none)                Claude + Cursor + Codex global (default)
+    --claude              Claude Code only  (~/.claude/skills/)
+    --cursor              Cursor only       (~/.cursor/rules/)
+    --codex               Codex CLI only    (~/.codex/AGENTS.md)
     --bundle [file]       ChatGPT / OpenAI API (system prompt file)
 
   Skill selection:
@@ -307,7 +308,7 @@ Commands:
     <skill-name>          Single skill
 
   Target:
-    --project DIR         Install to project directory
+    --project DIR         Install to project directory (scoped)
     --path DIR            Custom directory
 
   MCP:
@@ -323,11 +324,12 @@ Commands:
   cache clear             Clear install metadata
 
 Examples:
-  npx birdeye-skills install --all                             # Claude personal
-  npx birdeye-skills install --all --project .                 # Claude project
+  npx birdeye-skills install --all                             # All agents (global)
+  npx birdeye-skills install --all --project .                 # All agents (project)
   npx birdeye-skills install --all --project . --api-key KEY   # With MCP key
-  npx birdeye-skills install --cursor --all                    # Cursor global
-  npx birdeye-skills install --codex --all --project .         # Codex AGENTS.md
+  npx birdeye-skills install --claude --all                    # Claude only
+  npx birdeye-skills install --cursor --all                    # Cursor only (global)
+  npx birdeye-skills install --codex --all --project .         # Codex (project)
   npx birdeye-skills install --bundle                          # ChatGPT bundle
   npx birdeye-skills@latest install --all                      # Update to latest
   npx birdeye-skills check                                     # Check TTL status
