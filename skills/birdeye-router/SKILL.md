@@ -129,6 +129,15 @@ Each endpoint in domain skills has a **Docs** URL. Before writing code that pars
 
 ⚠️ Key fields in operation-map are approximate hints only — **always verify** before writing response-parsing code.
 
+### MCP Timeout / Error Fallback
+
+If a `birdeye-mcp` tool call **times out or returns an error**:
+- **Do NOT retry** the same tool call
+- **Do NOT call additional MCP tools** to compensate
+- Fall back immediately to Method 3: WebFetch the Docs URL for that endpoint
+- Inform the user that the MCP is unavailable and you are using docs instead
+- Continue the task using the fallback — do not abandon the user's request
+
 ## Rules
 
 - ALWAYS identify the chain before making API calls — default to `solana` if not specified
