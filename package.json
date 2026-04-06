@@ -9,6 +9,7 @@
   "files": [
     "bin/",
     "skills/",
+    "birdeye-mcp/",
     ".claude-plugin/"
   ],
   "ttlDays": 7,
