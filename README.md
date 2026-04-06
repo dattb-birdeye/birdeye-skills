@@ -100,18 +100,12 @@ The npm CLI auto-configures MCP when installing with `--api-key`:
 npx birdeye-skills install --all --project . --api-key YOUR_KEY
 ```
 
-### Docs Companion MCP (optional — endpoint discovery)
+### Fallback: Docs Companion MCP
 
-The `birdeye-api-docs` companion provides endpoint documentation, CU costs, and search — does NOT make API calls. Use alongside the official MCP.
-
-| Tool | Purpose |
-|---|---|
-| `birdeye_get_endpoint_info` | Get docs, params, CU cost, docs URL |
-| `birdeye_search_endpoints` | Search endpoints by keyword |
-| `birdeye_list_endpoints` | List all endpoints grouped by domain |
+If the official MCP is unavailable (outage, no API key, offline), add this local fallback — powered by the official [Birdeye OpenAPI spec](https://assets.birdeye.so/bds/docs/openapi_docs.json) fetched and cached locally.
 
 ```bash
-cd birdeye-mcp && npm install && npm run build
+cd birdeye-mcp && npm install
 ```
 
 ```json
@@ -119,11 +113,19 @@ cd birdeye-mcp && npm install && npm run build
   "mcpServers": {
     "birdeye-api-docs": {
       "command": "node",
-      "args": ["/path/to/birdeye-skills/birdeye-mcp/dist/index.js"]
+      "args": ["/path/to/birdeye-skills/birdeye-mcp/index.js"]
     }
   }
 }
 ```
+
+| Tool | Purpose |
+|---|---|
+| `birdeye_list_endpoints` | List all 75+ endpoints grouped by domain |
+| `birdeye_search_endpoints` | Search endpoints by keyword |
+| `birdeye_get_endpoint_info` | Get params, types, required flags, and docs URL |
+
+Spec is fetched once and cached at `~/.birdeye/openapi-cache.json` (refreshed every 24h). Falls back to stale cache if offline.
 
 ---
 
@@ -275,7 +277,9 @@ birdeye-skills/
     birdeye-research-assistant/
   bin/
     cli.js                # npm CLI (npx birdeye-skills)
-  birdeye-mcp/            # Docs companion MCP server
+  birdeye-mcp/
+    index.js              # Fallback MCP server (OpenAPI-powered, no build step)
+    package.json
   install.sh              # Shell installer (no Node.js required)
   package.json            # npm package (name: birdeye-skills)
 ```
@@ -345,24 +349,35 @@ See [`SYSTEM-PROMPTS.md`](./SYSTEM-PROMPTS.md) for detailed integration architec
 
 ---
 
-## Local Development
+## For Developers
 
-Test changes locally without publishing to npm:
+### Test CLI locally with npm link
 
 ```bash
-# Clone and link globally
-git clone https://github.com/birdeye-so/birdeye-skills.git
+git clone https://github.com/birdeye-so/birdeye-skills
 cd birdeye-skills
+
+# Link the package globally (no npm publish needed)
 npm link
 
-# Now `birdeye-skills` resolves to your local clone
+# Now use the CLI anywhere
 birdeye-skills install --all
-birdeye-skills install --all --project /path/to/app
-birdeye-skills install --cursor --all
+birdeye-skills list
 birdeye-skills check
 
-# Unlink when done
-npm unlink -g birdeye-skills
+# When done testing
+npm unlink -g dattb-birdeye-skills
 ```
 
 Edit files under `skills/` or `bin/cli.js`, then re-run commands immediately — no build step needed.
+
+### Test the fallback MCP locally
+
+```bash
+cd birdeye-mcp && npm install
+
+# Smoke test — should hang silently (waiting for MCP stdio)
+node index.js
+```
+
+Add to MCP config with the absolute path to `birdeye-mcp/index.js`.
