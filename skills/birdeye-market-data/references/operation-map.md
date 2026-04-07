@@ -33,7 +33,7 @@ Same as GET but accepts addresses in request body for larger payloads.
 
 **Body**: `{ "list_address": "addr1,addr2,addr3" }`
 
-### GET /defi/price_volume-single
+### GET /defi/price_volume/single
 Combined price and volume data for a single token.
 
 **CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-price_volume-single
@@ -42,7 +42,7 @@ Combined price and volume data for a single token.
 |---|---|---|---|
 | `address` | string | Yes | Token address |
 
-### POST /defi/price_volume-multi
+### POST /defi/price_volume/multi
 Combined price and volume for multiple tokens.
 
 **CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/post-defi-price_volume-multi
@@ -53,7 +53,7 @@ Combined price and volume for multiple tokens.
 
 ## OHLCV Endpoints
 
-### GET /defi/v3-ohlcv (Recommended)
+### GET /defi/v3/ohlcv (Recommended)
 V3 OHLCV candles for a token. Preferred over legacy endpoint.
 
 **CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv
@@ -67,7 +67,7 @@ V3 OHLCV candles for a token. Preferred over legacy endpoint.
 
 **Key fields**: `data.items[]` → `{ o, h, l, c, v, unixTime, type, address }`
 
-### GET /defi/v3-ohlcv-pair
+### GET /defi/v3/ohlcv-pair
 V3 OHLCV for a specific trading pair.
 
 **CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv-pair
@@ -152,7 +152,7 @@ Comprehensive token statistics.
 
 **Key fields**: `data.{ price, priceChange24h, volume24h, liquidity, marketCap, holder, supply, name, symbol, decimals, logoURI, extensions, ... }` — 30+ fields, see docs for full list.
 
-### GET /defi/v3-token-meta-data-single
+### GET /defi/v3/token/meta-data/single
 Token metadata only.
 
 **CU Cost**: 5 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meta-data-single
@@ -163,7 +163,7 @@ Token metadata only.
 
 **Key fields**: `data.{ name, symbol, decimals, logoURI, extensions }`
 
-### GET /defi/v3-token-meta-data-multiple
+### GET /defi/v3/token/meta-data/multiple
 Batch token metadata.
 
 **CU Cost**: 5 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meta-data-multiple
@@ -172,7 +172,7 @@ Batch token metadata.
 |---|---|---|---|
 | `list_address` | string | Yes | Comma-separated addresses (max 100) |
 
-### GET /defi/v3-token-market-data
+### GET /defi/v3/token/market-data
 Market data for a single token.
 
 **CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data
@@ -183,7 +183,7 @@ Market data for a single token.
 
 **Key fields**: `data.{ marketCap, fullyDilutedValuation, liquidity, totalSupply, circulatingSupply }`
 
-### GET /defi/v3-token-market-data-multiple
+### GET /defi/v3/token/market-data-multiple
 Batch market data.
 
 **CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data-multiple
@@ -192,7 +192,7 @@ Batch market data.
 |---|---|---|---|
 | `list_address` | string | Yes | Comma-separated addresses |
 
-### GET /defi/v3-token-trade-data-single
+### GET /defi/v3/token/trade-data/single
 Trading metrics for a single token.
 
 **CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-single
@@ -203,7 +203,7 @@ Trading metrics for a single token.
 
 **Key fields**: `data.{ buy24h, sell24h, buyVolume24h, sellVolume24h, uniqueBuyer24h, uniqueSeller24h, tradeCount24h }`
 
-### GET /defi/v3-token-trade-data-multiple
+### GET /defi/v3/token/trade-data/multiple
 Batch trade data.
 
 **CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-multiple
@@ -212,7 +212,7 @@ Batch trade data.
 |---|---|---|---|
 | `list_address` | string | Yes | Comma-separated addresses |
 
-### GET /defi/v3-token-exit-liquidity
+### GET /defi/v3/token/exit-liquidity
 Exit liquidity analysis.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-exit-liquidity
@@ -221,7 +221,7 @@ Exit liquidity analysis.
 |---|---|---|---|
 | `address` | string | Yes | Token address |
 
-### GET /defi/v3-token-exit-liquidity-multiple
+### GET /defi/v3/token/exit-liquidity-multiple
 Batch exit liquidity.
 
 **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-exit-liquidity-multiple
@@ -230,7 +230,7 @@ Batch exit liquidity.
 |---|---|---|---|
 | `list_address` | string | Yes | Comma-separated addresses |
 
-### GET /defi/v3-pair-overview-single
+### GET /defi/v3/pair/overview/single
 Single trading pair overview.
 
 **CU Cost**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-pair-overview-single
@@ -241,7 +241,7 @@ Single trading pair overview.
 
 **Key fields**: `data.{ base, quote, price, volume24h, liquidity, feeRate, dex }`
 
-### GET /defi/v3-pair-overview-multiple
+### GET /defi/v3/pair/overview/multiple
 Batch pair overviews.
 
 **CU Cost**: 20 per pair | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-pair-overview-multiple
@@ -250,7 +250,7 @@ Batch pair overviews.
 |---|---|---|---|
 | `list_address` | string | Yes | Comma-separated pair addresses |
 
-### GET /defi/v3-price-stats-single
+### GET /defi/v3/price/stats/single
 Price statistical analysis.
 
 **CU Cost**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-price-stats-single
@@ -259,7 +259,7 @@ Price statistical analysis.
 |---|---|---|---|
 | `address` | string | Yes | Token address |
 
-### POST /defi/v3-price-stats-multiple
+### POST /defi/v3/price/stats/multiple
 Batch price statistics.
 
 **CU Cost**: 20 per token | **Docs**: https://docs.birdeye.so/reference/post-defi-v3-price-stats-multiple
@@ -270,7 +270,7 @@ Batch price statistics.
 
 ## Alltime & History Endpoints
 
-### GET /defi/v3-all-time-trades-single
+### GET /defi/v3/all-time/trades/single
 Complete historical trading data for a token.
 
 **Docs**: https://docs.birdeye.so/reference/get-defi-v3-all-time-trades-single
@@ -281,7 +281,7 @@ Complete historical trading data for a token.
 
 **Key fields**: `data.{ allTimeBuyVolume, allTimeSellVolume, allTimeTradeCount, allTimeUniqueBuyers, firstTradeUnixTime, lastTradeUnixTime }`
 
-### POST /defi/v3-all-time-trades-multiple
+### POST /defi/v3/all-time/trades/multiple
 Batch historical trade data.
 
 **Docs**: https://docs.birdeye.so/reference/post-defi-v3-all-time-trades-multiple

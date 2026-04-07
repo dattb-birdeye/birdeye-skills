@@ -64,7 +64,7 @@ async function fullSecurityAnalysis(
 
   // 3. Top holders for concentration check (variable CU)
   const holdersRes = await fetch(
-    `https://public-api.birdeye.so/defi/v3-token-holder?address=${tokenAddress}&limit=20`,
+    `https://public-api.birdeye.so/defi/v3/token/holder?address=${tokenAddress}&limit=20`,
     { headers }
   );
   const holders = await holdersRes.json();

@@ -17,7 +17,7 @@ Trades for a specific token with advanced filters.
 
 **Key fields**: `data.items[]` → `{ txHash, blockUnixTime, source, owner, from: { address, symbol, amount, uiAmount, price }, to: { ... }, volumeUSD, side }`, `data.hasNext`
 
-### GET /defi/v3-token-txs-by-volume
+### GET /defi/v3/token/txs-by-volume
 Trades filtered by minimum volume.
 
 **CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-txs-by-volume
@@ -106,7 +106,7 @@ Similar params to v3-txs with limit.
 
 ## Mint/Burn
 
-### GET /defi/v3-token-mint-burn-txs
+### GET /defi/v3/token/mint-burn-txs
 Mint and burn transaction history for a token.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-mint-burn-txs
@@ -125,7 +125,7 @@ Mint and burn transaction history for a token.
 
 ## Trader Trades
 
-### GET /trader-txs-seek_by_time
+### GET /trader/txs/seek_by_time
 Trades by a specific wallet/trader within a time range.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-trader-txs-seek_by_time
@@ -143,7 +143,7 @@ Trades by a specific wallet/trader within a time range.
 
 ## Balance & Transfer
 
-### GET /wallet-v2-balance-change
+### GET /wallet/v2/balance-change
 Wallet balance changes over time.
 
 **CU Cost**: 20 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-balance-change
@@ -157,14 +157,14 @@ Wallet balance changes over time.
 
 **Key fields**: `data.items[]` → `{ address, symbol, name, decimals, logoURI, amount, uiAmount, changeType, blockUnixTime, txHash }`
 
-### POST /wallet-v2-token-balance
+### POST /wallet/v2/token-balance
 Current token balances for a wallet.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-token-balance
 
 **Body**: `{ "wallet": "wallet_address", "token_list": ["token_addr_1", "token_addr_2"] }`
 
-### POST /token-v1-transfer
+### POST /token/v1/transfer
 Token transfer history.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/post-token-v1-transfer
@@ -173,7 +173,7 @@ Token transfer history.
 
 **Key fields**: `data.items[]` → `{ txHash, blockUnixTime, from, to, tokenAddress, symbol, amount, uiAmount, valueUSD }`
 
-### POST /token-v1-transfer-total
+### POST /token/v1/transfer-total
 Aggregated transfer volumes.
 
 **Docs**: https://docs.birdeye.so/reference/post-token-v1-transfer-total
@@ -182,21 +182,21 @@ Aggregated transfer volumes.
 
 **Key fields**: `data.{ totalTransfers, totalVolumeUSD, uniqueSenders, uniqueReceivers }`
 
-### POST /wallet-v2-transfer
+### POST /wallet/v2/transfer
 Wallet-centric transfer history.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-transfer
 
 **Body**: `{ "wallet": "wallet_address", "offset": 0, "limit": 50 }`
 
-### POST /wallet-v2-transfer-total
+### POST /wallet/v2/transfer-total
 Wallet transfer summary.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-transfer-total
 
 **Body**: Same as wallet-v2-transfer.
 
-### GET /v1-wallet-token_balance (Beta)
+### GET /v1/wallet/token_balance (Beta)
 Legacy wallet token balance endpoint.
 
 **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-token_balance
@@ -205,7 +205,7 @@ Legacy wallet token balance endpoint.
 
 ## Blockchain State
 
-### GET /defi/v3-txs-latest-block
+### GET /defi/v3/txs/latest-block
 Current latest block number.
 
 **CU Cost**: 5 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-txs-latest-block

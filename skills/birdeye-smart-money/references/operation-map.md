@@ -2,7 +2,7 @@
 
 ## Smart Money Token List
 
-### GET /smart-money-v1-token-list
+### GET /smart-money/v1/token/list
 Tokens being actively traded by smart money wallets.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-smart-money-v1-token-list
@@ -49,7 +49,7 @@ async function getSmartMoneyAccumulation(
     limit: limit.toString(),
   });
 
-  const url = `https://public-api.birdeye.so/smart-money-v1-token-list?${params}`;
+  const url = `https://public-api.birdeye.so/smart-money/v1/token/list?${params}`;
 
   const res = await fetch(url, {
     headers: {
@@ -82,7 +82,7 @@ async function getSmartMoneyDistribution(
     limit: '20',
   });
 
-  const url = `https://public-api.birdeye.so/smart-money-v1-token-list?${params}`;
+  const url = `https://public-api.birdeye.so/smart-money/v1/token/list?${params}`;
 
   const res = await fetch(url, {
     headers: {

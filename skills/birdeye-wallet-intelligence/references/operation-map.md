@@ -2,7 +2,7 @@
 
 ## Net Worth
 
-### GET /wallet-v2-current-net-worth
+### GET /wallet/v2/current-net-worth
 Real-time portfolio valuation.
 
 **CU Cost**: 60 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-current-net-worth
@@ -13,7 +13,7 @@ Real-time portfolio valuation.
 
 **Key fields**: `data.{ wallet, totalUsd, solBalance, solUsdValue, tokenCount, nftCount, updateTime }`
 
-### GET /wallet-v2-net-worth
+### GET /wallet/v2/net-worth
 Historical net worth chart data.
 
 **CU Cost**: 60 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-net-worth
@@ -26,7 +26,7 @@ Historical net worth chart data.
 
 **Key fields**: `data.items[]` → `{ unixTime, totalUsd, solValue, tokenValue, nftValue }`
 
-### GET /wallet-v2-net-worth-details
+### GET /wallet/v2/net-worth-details
 Granular holding breakdown.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-net-worth-details
@@ -37,7 +37,7 @@ Granular holding breakdown.
 
 **Key fields**: Detailed list of each token holding with amount, price, USD value, and percentage of portfolio.
 
-### POST /wallet-v2-net-worth-summary-multiple
+### POST /wallet/v2/net-worth-summary/multiple
 Batch portfolio values for multiple wallets.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-net-worth-summary-multiple
@@ -48,7 +48,7 @@ Batch portfolio values for multiple wallets.
 
 ## PnL (Profit & Loss)
 
-### GET /wallet-v2-pnl-summary
+### GET /wallet/v2/pnl-summary
 Overall PnL summary for a wallet.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl-summary
@@ -59,7 +59,7 @@ Overall PnL summary for a wallet.
 
 **Key fields**: `data.{ wallet, totalPnl, totalPnlPercent, totalInvested, totalRealized, totalUnrealized, winRate, totalTrades }`
 
-### POST /wallet-v2-pnl-details
+### POST /wallet/v2/pnl-details
 Detailed gain/loss per trade.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-pnl-details
@@ -68,7 +68,7 @@ Detailed gain/loss per trade.
 
 **Key fields**: List of individual trades with entry/exit prices, PnL per trade, timestamps.
 
-### GET /wallet-v2-pnl
+### GET /wallet/v2/pnl
 PnL breakdown per token.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl
@@ -80,7 +80,7 @@ PnL breakdown per token.
 
 **Key fields**: Per-token `{ tokenAddress, symbol, buyVolume, sellVolume, avgBuyPrice, avgSellPrice, realizedPnl, unrealizedPnl, totalPnl, pnlPercent }`
 
-### GET /wallet-v2-pnl-multiple
+### GET /wallet/v2/pnl-multiple
 Compare PnL across multiple wallets.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl-multiple
@@ -109,7 +109,7 @@ Leading traders for a specific token.
 
 **Key fields**: `data.items[]` → `{ wallet, pnl, volume, tradeCount, buyVolume, sellVolume, tags }`
 
-### GET /trader-gainers-losers
+### GET /trader/gainers-losers
 Top performing and worst-performing traders.
 
 **Docs**: https://docs.birdeye.so/reference/get-trader-gainers-losers
@@ -125,7 +125,7 @@ Top performing and worst-performing traders.
 
 ## Wallet History
 
-### POST /wallet-v2-tx-first-funded
+### POST /wallet/v2/tx/first-funded
 First funding transaction for a wallet.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-tx-first-funded
@@ -134,7 +134,7 @@ First funding transaction for a wallet.
 
 **Key fields**: Details of the first transaction that funded the wallet (useful for wallet provenance tracking).
 
-### GET /v1-wallet-tx_list (Beta)
+### GET /v1/wallet/tx_list (Beta)
 Complete transaction history.
 
 **CU Cost**: 150 | **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-tx_list
@@ -146,7 +146,7 @@ Complete transaction history.
 | `after_time` | number | No | Start Unix timestamp |
 | `limit` | number | No | Max results |
 
-### GET /v1-wallet-token_list (Beta)
+### GET /v1/wallet/token_list (Beta)
 Current holdings inventory.
 
 **CU Cost**: 100 | **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-token_list

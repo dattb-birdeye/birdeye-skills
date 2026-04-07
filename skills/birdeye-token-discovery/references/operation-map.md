@@ -2,7 +2,7 @@
 
 ## Search
 
-### GET /defi/v3-search
+### GET /defi/v3/search
 Search tokens and pairs by keyword (name, symbol, or address).
 
 **CU Cost**: Low | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-search
@@ -160,7 +160,7 @@ Detailed meme token metrics.
 
 ## Utilities
 
-### GET /utils-v1-credits
+### GET /utils/v1/credits
 Check API credit usage.
 
 **Docs**: https://docs.birdeye.so/reference/get-utils-v1-credits

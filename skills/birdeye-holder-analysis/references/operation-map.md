@@ -2,7 +2,7 @@
 
 ## Token Holder
 
-### GET /defi/v3-token-holder
+### GET /defi/v3/token/holder
 Paginated list of token holders with balances.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-holder
@@ -24,7 +24,7 @@ Paginated list of token holders with balances.
 
 ## Holder Distribution
 
-### GET /holder-v1-distribution
+### GET /holder/v1/distribution
 Distribution of holders by balance ranges.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-holder-v1-distribution
@@ -39,7 +39,7 @@ Distribution of holders by balance ranges.
 
 ## Batch Holder
 
-### POST /token-v1-holder-batch
+### POST /token/v1/holder/batch
 Batch holder data for multiple tokens.
 
 **CU Cost**: Variable per token | **Docs**: https://docs.birdeye.so/reference/post-token-v1-holder-batch
@@ -64,7 +64,7 @@ async function getConcentrationScore(
   top50Pct: number;
   risk: 'low' | 'medium' | 'high';
 }> {
-  const url = `https://public-api.birdeye.so/defi/v3-token-holder?address=${tokenAddress}&limit=50`;
+  const url = `https://public-api.birdeye.so/defi/v3/token/holder?address=${tokenAddress}&limit=50`;
 
   const res = await fetch(url, {
     headers: {
