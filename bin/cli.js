@@ -17,7 +17,7 @@
  *   birdeye-skills info <skill-name>               Show skill details
  */
 
-import { readFileSync, writeFileSync, mkdirSync, cpSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, cpSync, existsSync, readdirSync, rmSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
@@ -459,10 +459,23 @@ function checkForUpdates() {
   const versions = loadVersions();
   const installed = config.installed || {};
 
+  // Read package version
+  const pkgPath = join(PKG_ROOT, 'package.json');
+  const pkg = existsSync(pkgPath) ? JSON.parse(readFileSync(pkgPath, 'utf-8')) : {};
+  const pkgVersion = pkg.version || 'unknown';
+
+  // Detect source: local project install vs global/npx cache
+  const isGlobal = PKG_ROOT.includes('node_modules/.bin') || PKG_ROOT.includes('/.npm/') ||
+    PKG_ROOT.includes('/lib/node_modules/') || !existsSync(join(PKG_ROOT, 'package.json'));
+  const sourceLabel = isGlobal ? 'global/npx' : 'local project';
+
   console.log('');
+  console.log(`  ${C.bold}dattb-bds-skills v${pkgVersion}${C.reset}  ${C.dim}(${sourceLabel}: ${PKG_ROOT})${C.reset}`);
+  console.log('');
+
   if (!config.installedAt) {
     warn('No install record found.');
-    info('Run: npx birdeye-skills install --all');
+    info('Run: npx dattb-bds-skills install --all');
     console.log('');
     return;
   }
@@ -471,7 +484,7 @@ function checkForUpdates() {
   const ageDays = Math.floor((Date.now() - new Date(config.installedAt).getTime()) / 86400000);
   if (ageDays >= SKILL_TTL_DAYS) {
     warn(`Skills are ${ageDays} days old (TTL: ${SKILL_TTL_DAYS} days) — update recommended`);
-    info('Run: npx birdeye-skills@latest install --all');
+    info('Run: npx dattb-bds-skills@latest install --all');
   } else {
     ok(`Skills are fresh — installed ${ageDays} day(s) ago (TTL: ${SKILL_TTL_DAYS} days)`);
   }
@@ -497,6 +510,66 @@ function checkForUpdates() {
 
   config.lastCheck = new Date().toISOString();
   saveConfig(config);
+  console.log('');
+}
+
+// ---------------------------------------------------------------------------
+// Uninstall
+// ---------------------------------------------------------------------------
+
+function uninstall() {
+  console.log('');
+
+  let removed = 0;
+
+  // 1. Claude Code skills (~/.claude/skills/birdeye-*)
+  if (existsSync(CLAUDE_SKILLS_DIR)) {
+    for (const entry of readdirSync(CLAUDE_SKILLS_DIR)) {
+      if (entry.startsWith('birdeye-')) {
+        const target = join(CLAUDE_SKILLS_DIR, entry);
+        rmSync(target, { recursive: true, force: true });
+        ok(`Removed Claude skill: ${entry}`);
+        removed++;
+      }
+    }
+  }
+
+  // 2. Cursor rules (~/.cursor/rules/birdeye-*.mdc)
+  if (existsSync(CURSOR_RULES_DIR)) {
+    for (const entry of readdirSync(CURSOR_RULES_DIR)) {
+      if (entry.startsWith('birdeye-') && entry.endsWith('.mdc')) {
+        rmSync(join(CURSOR_RULES_DIR, entry), { force: true });
+        ok(`Removed Cursor rule: ${entry}`);
+        removed++;
+      }
+    }
+  }
+
+  // 3. Codex AGENTS files (~/.codex/AGENTS.md or AGENTS-birdeye.md)
+  for (const file of ['AGENTS.md', 'AGENTS-birdeye.md']) {
+    const target = join(CODEX_DIR, file);
+    if (existsSync(target)) {
+      const content = readFileSync(target, 'utf-8');
+      if (content.includes('Birdeye')) {
+        rmSync(target, { force: true });
+        ok(`Removed Codex file: ${target}`);
+        removed++;
+      }
+    }
+  }
+
+  // 4. Wipe config
+  if (existsSync(CONFIG_FILE)) {
+    rmSync(CONFIG_FILE, { force: true });
+    ok(`Removed config: ${CONFIG_FILE}`);
+  }
+
+  console.log('');
+  if (removed === 0) {
+    info('Nothing to uninstall — no Birdeye skills found.');
+  } else {
+    ok(`Uninstalled ${removed} item(s).`);
+  }
   console.log('');
 }
 
@@ -670,6 +743,7 @@ Commands:
     --api-key <key>       Set Birdeye API key in MCP config
     --skip-mcp            Skip auto MCP config generation
 
+  uninstall               Remove all installed skills (Claude, Cursor, Codex) and config
   update                  Update all installed skills to latest version
   pull                    Pull latest skills from registry and update
   check                   Check for available updates
@@ -963,6 +1037,10 @@ async function main() {
 
     case 'pull':
       pullLatest();
+      break;
+
+    case 'uninstall':
+      uninstall();
       break;
 
     case 'check':
