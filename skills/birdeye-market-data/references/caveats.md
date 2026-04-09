@@ -2,7 +2,7 @@
 
 ## Endpoint Version Confusion
 
-- **V3 vs Legacy**: Always prefer V3 endpoints (`/defi/v3-ohlcv`, `/defi/v3-token-*`). Legacy endpoints (`/defi/ohlcv`, `/defi/tokenlist`) are maintained for backward compatibility but may have lower performance.
+- **V3 vs Legacy**: Always prefer V3 endpoints (`/defi/v3/ohlcv`, `/defi/v3/token/*`). Legacy endpoints (`/defi/ohlcv`, `/defi/tokenlist`) are maintained for backward compatibility but may have lower performance.
 - **Dynamic CU Costs**: V3 OHLCV and recent trades use dynamic pricing based on data range. A 1-hour window costs less than a 30-day window.
 
 ## OHLCV Pitfalls
@@ -10,7 +10,7 @@
 - **Max 1000 records**: If your time range produces >1000 candles, the response is truncated. Split into smaller ranges.
 - **Interval strings are case-sensitive**: Use `1H` not `1h`, `1D` not `1d`, `1M` not `1m` (except for minutes: `1m`, `3m`, `5m`, `15m`, `30m`).
 - **time_from and time_to are Unix seconds**, not milliseconds. Divide JavaScript `Date.now()` by 1000.
-- **Pair vs Token OHLCV**: `/defi/v3-ohlcv` uses token address (aggregated across all pairs). `/defi/v3-ohlcv-pair` uses pair address (specific DEX pool). Choose based on whether you want aggregated or pool-specific data.
+- **Pair vs Token OHLCV**: `/defi/v3/ohlcv` uses token address (aggregated across all pairs). `/defi/v3/ohlcv/pair` uses pair address (specific DEX pool). Choose based on whether you want aggregated or pool-specific data.
 
 ## Price Data Pitfalls
 

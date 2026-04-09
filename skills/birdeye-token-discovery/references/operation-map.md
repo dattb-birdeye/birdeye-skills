@@ -23,7 +23,7 @@ Search tokens and pairs by keyword (name, symbol, or address).
 
 ## Token Lists
 
-### GET /defi/v3-token-list
+### GET /defi/v3/token/list
 Browse tokens with filtering and sorting.
 
 **CU Cost**: 100 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-list
@@ -42,17 +42,17 @@ Browse tokens with filtering and sorting.
 
 **Key fields**: `data.tokens[]` → `{ address, name, symbol, price, priceChange24h, volume24h, liquidity, marketCap, holder, trade24h, uniqueWallet24h }`, `data.total`
 
-### GET /defi/v3-token-list-scroll
+### GET /defi/v3/token/list/scroll
 Scroll-based pagination for large token lists.
 
 **CU Cost**: 500 (expensive) | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-list-scroll
 
-Same params as v3-token-list, plus:
+Same params as v3/token/list, plus:
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `scroll_id` | string | No | Scroll cursor from previous response |
 
-Use only when you need to iterate through the full token list. For most use cases, `v3-token-list` with offset/limit is sufficient.
+Use only when you need to iterate through the full token list. For most use cases, `v3/token/list` with offset/limit is sufficient.
 
 ### GET /defi/tokenlist (Legacy)
 Legacy token list endpoint.
@@ -70,7 +70,7 @@ Legacy token list endpoint.
 
 ## Market List
 
-### GET /defi/v2-markets
+### GET /defi/v2/markets
 All trading pairs/markets for a token.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-markets
@@ -89,7 +89,7 @@ All trading pairs/markets for a token.
 
 ## New Listing & Trending
 
-### GET /defi/v2-tokens-new_listing
+### GET /defi/v2/tokens/new_listing
 Recently listed tokens.
 
 **CU Cost**: 80 | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-tokens-new_listing
@@ -102,23 +102,25 @@ Recently listed tokens.
 
 **Key fields**: List of recently listed tokens with creation time, initial liquidity, current price, volume.
 
-### GET /defi-token_trending
+### GET /defi/token_trending
 Currently trending tokens.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-token_trending
 
 | Param | Type | Required | Description |
 |---|---|---|---|
-| `sort_by` | string | No | `rank`, `volume24h`, `priceChange24h` |
-| `sort_type` | string | No | `asc`, `desc` |
+| `sort_by` | string | Yes | `rank`, `volumeUSD`, `liquidity` |
+| `sort_type` | string | Yes | `asc`, `desc` |
+| `interval` | string | No | `1h`, `4h`, `24h` |
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
+| `ui_amount_mode` | string | No | `raw`, `scaled` |
 
 ---
 
 ## Creation Info
 
-### GET /defi-token_creation_info
+### GET /defi/token_creation_info
 Token creation/deployment details.
 
 **CU Cost**: 80 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_creation_info
@@ -133,7 +135,7 @@ Token creation/deployment details.
 
 ## Meme Tokens
 
-### GET /defi/v3-token-meme-list
+### GET /defi/v3/token/meme/list
 Browse meme tokens with filtering.
 
 **CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meme-list
@@ -145,7 +147,7 @@ Browse meme tokens with filtering.
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
 
-### GET /defi/v3-token-meme-detail-single
+### GET /defi/v3/token/meme/detail/single
 Detailed meme token metrics.
 
 **CU Cost**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meme-detail-single

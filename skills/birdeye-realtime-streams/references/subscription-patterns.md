@@ -152,7 +152,7 @@ ws.on('message', async (rawData: Buffer) => {
 
     // Quick security check via REST API
     const securityRes = await fetch(
-      `https://public-api.birdeye.so/defi-token_security?address=${token.address}`,
+      `https://public-api.birdeye.so/defi/token_security?address=${token.address}`,
       { headers: { 'X-API-KEY': API_KEY, 'x-chain': 'solana' } }
     );
     const security = await securityRes.json();

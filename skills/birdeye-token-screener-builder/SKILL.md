@@ -66,26 +66,26 @@ interface ScreenerCriteria {
 
 ### Step 2: Fetch Base Token List
 ```
-birdeye-token-discovery → GET /defi/v3-token-list (with market filters)
+birdeye-token-discovery → GET /defi/v3/token/list (with market filters)
 ```
 
 ### Step 3: Enrich with Security Data
 For each token in the list:
 ```
-birdeye-security-analysis → GET /defi-token_security (risk check)
+birdeye-security-analysis → GET /defi/token_security (risk check)
 ```
 Filter out tokens that fail security criteria.
 
 ### Step 4: Check Smart Money Activity
 ```
-birdeye-smart-money → GET /smart-money-v1-token-list
+birdeye-smart-money → GET /smart-money/v1/token/list
 ```
 Cross-reference with screener results.
 
 ### Step 5: Optional — Holder Analysis
 For top candidates:
 ```
-birdeye-holder-analysis → GET /defi/v3-token-holder (concentration check)
+birdeye-holder-analysis → GET /defi/v3/token/holder (concentration check)
 ```
 
 ### Step 6: Set Up Live Updates
@@ -120,7 +120,7 @@ async function runScreener(
   if (criteria.minHolders) params.set('min_holder', String(criteria.minHolders));
 
   const listRes = await fetch(
-    `https://public-api.birdeye.so/defi/v3-token-list?${params}`,
+    `https://public-api.birdeye.so/defi/v3/token/list?${params}`,
     { headers }
   );
   const listData = await listRes.json();
@@ -141,7 +141,7 @@ async function runScreener(
   const results: ScreenerResult[] = [];
   for (const token of tokens) {
     const secRes = await fetch(
-      `https://public-api.birdeye.so/defi-token_security?address=${token.address}`,
+      `https://public-api.birdeye.so/defi/token_security?address=${token.address}`,
       { headers }
     );
     const secData = await secRes.json();
@@ -167,7 +167,7 @@ async function runScreener(
 
   // Step 4: Smart money overlay
   const smartRes = await fetch(
-    `https://public-api.birdeye.so/smart-money-v1-token-list?time_frame=24h&limit=100`,
+    `https://public-api.birdeye.so/smart-money/v1/token/list?interval=1d&limit=100`,
     { headers }
   );
   const smartData = await smartRes.json();
@@ -179,8 +179,8 @@ async function runScreener(
     const smartInfo = smartTokens.get(result.address);
     if (smartInfo) {
       result.smartMoneySignal = {
-        netVolume: smartInfo.smartNetVolume,
-        walletCount: smartInfo.smartWalletCount,
+        netVolume: smartInfo.netFlow,
+        walletCount: smartInfo.smartTradersNo,
         signal: smartInfo.signal,
       };
     }

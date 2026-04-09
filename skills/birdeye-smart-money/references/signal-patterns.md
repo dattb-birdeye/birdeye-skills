@@ -3,8 +3,8 @@
 ## Accumulation Signals (Bullish)
 
 ### Strong Accumulation
-- `smartNetVolume` >> 0 (large positive)
-- `smartWalletCount` >= 5 (multiple wallets, not just one)
+- `netFlow` >> 0 (large positive)
+- `smartTradersNo` >= 5 (multiple wallets, not just one)
 - `smartBuyCount` >> `smartSellCount`
 - Price hasn't pumped significantly yet
 - Liquidity is sufficient for the volume
@@ -12,7 +12,7 @@
 **Action**: This is a potential early entry signal. Verify with security analysis before acting.
 
 ### Gradual Accumulation
-- Consistent positive `smartNetVolume` across multiple time frames (24h, 7d)
+- Consistent positive `netFlow` across multiple time frames (24h, 7d)
 - Wallet count gradually increasing
 - Volume is moderate, not explosive
 
@@ -28,14 +28,14 @@
 ## Distribution Signals (Bearish)
 
 ### Active Distribution
-- `smartNetVolume` << 0 (large negative)
+- `netFlow` << 0 (large negative)
 - Multiple smart wallets selling
 - Price may still be rising (distribution into strength)
 
 **Action**: Warning signal. Smart money taking profits or exiting.
 
 ### Dump After Accumulation
-- Previously positive `smartNetVolume` now turning negative
+- Previously positive `netFlow` now turning negative
 - Smart buy wallet count decreasing
 - Volume spiking with selling
 
@@ -44,8 +44,8 @@
 ## Neutral / Noise
 
 ### Low Activity
-- `smartWalletCount` < 3
-- Low `smartNetVolume` (close to zero)
+- `smartTradersNo` < 3
+- Low `netFlow` (close to zero)
 - Few transactions
 
 **Action**: Not enough signal. Don't over-interpret.
@@ -62,8 +62,8 @@ Use the API response fields to derive a signal. WebFetch the Docs URL in `operat
 
 ```typescript
 function assessSignal(token: any): { direction: string; strength: string; confidence: number; reasons: string[] } {
-  const netRatio = token.smartNetVolume / (token.smartBuyVolume + token.smartSellVolume || 1);
-  const walletCount = token.smartWalletCount;
+  const netRatio = token.netFlow / (token.smartBuyVolume + token.smartSellVolume || 1);
+  const walletCount = token.smartTradersNo;
   const buyRatio = token.smartBuyCount / (token.smartBuyCount + token.smartSellCount || 1);
 
   let direction: 'bullish' | 'bearish' | 'neutral';

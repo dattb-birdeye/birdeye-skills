@@ -29,9 +29,9 @@ You are an expert at discovering and searching tokens using Birdeye APIs. This s
 ## Rules
 
 ### Search Strategy
-- Use `GET /defi/v3-search` for text-based search — supports token name, symbol, and address
-- Use `GET /defi/v3-token-list` for filtered browsing with sorting (by volume, liquidity, market cap, etc.)
-- Use `GET /defi/v3-token-list-scroll` for paginated browsing of large datasets (500 CU per call — expensive)
+- Use `GET /defi/v3/search` for text-based search — supports token name, symbol, and address
+- Use `GET /defi/v3/token/list` for filtered browsing with sorting (by volume, liquidity, market cap, etc.)
+- Use `GET /defi/v3/token/list/scroll` for paginated browsing of large datasets (500 CU per call — expensive)
 
 ### Token Lists
 - V3 token list supports sorting by: `volume24h`, `liquidity`, `marketCap`, `price`, `priceChange24h`, `holder`, `trade24h`
@@ -40,13 +40,13 @@ You are an expert at discovering and searching tokens using Birdeye APIs. This s
 - Filter by `min_liquidity`, `min_volume_24h`, `min_market_cap` to reduce noise
 
 ### New Listings & Trending
-- `GET /defi/v2-tokens-new_listing` — recently added tokens (80 CU)
-- `GET /defi-token_trending` — currently trending tokens
-- `GET /defi-token_creation_info` — creation details for a specific token (80 CU)
+- `GET /defi/v2/tokens/new_listing` — recently added tokens (80 CU)
+- `GET /defi/token_trending` — currently trending tokens
+- `GET /defi/token_creation_info` — creation details for a specific token (80 CU)
 
 ### Meme Tokens
-- `GET /defi/v3-token-meme-list` — browse meme tokens with filtering
-- `GET /defi/v3-token-meme-detail-single` — detailed meme metrics for a single token (30 CU)
+- `GET /defi/v3/token/meme/list` — browse meme tokens with filtering
+- `GET /defi/v3/token/meme/detail/single` — detailed meme metrics for a single token (30 CU)
 
 ### CU Optimization
 - Search (`v3-search`): Low CU — use freely

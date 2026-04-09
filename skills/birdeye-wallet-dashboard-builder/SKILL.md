@@ -34,29 +34,29 @@ You are an expert at building wallet analysis dashboards and reports using multi
 
 ### Step 1: Gather Wallet Data
 ```
-birdeye-wallet-intelligence → GET /wallet-v2-current-net-worth
-birdeye-wallet-intelligence → GET /wallet-v2-net-worth-details
-birdeye-wallet-intelligence → GET /wallet-v2-pnl-summary
+birdeye-wallet-intelligence → GET /wallet/v2/current-net-worth
+birdeye-wallet-intelligence → GET /wallet/v2/net-worth-details
+birdeye-wallet-intelligence → GET /wallet/v2/pnl/summary
 ```
 
 ### Step 2: Get Trade History
 ```
-birdeye-transaction-flow → GET /trader-txs-seek_by_time (recent trades)
-birdeye-transaction-flow → GET /wallet-v2-balance-change (balance changes)
+birdeye-transaction-flow → GET /trader/txs/seek_by_time (recent trades)
+birdeye-transaction-flow → GET /wallet/v2/balance-change (balance changes)
 ```
 
 ### Step 3: Analyze Holdings
 For each significant token in the portfolio:
 ```
 birdeye-market-data → GET /defi/price (current prices)
-birdeye-holder-analysis → GET /defi/v3-token-holder (holder rank for this wallet)
-birdeye-security-analysis → GET /defi-token_security (risk check)
+birdeye-holder-analysis → GET /defi/v3/token/holder (holder rank for this wallet)
+birdeye-security-analysis → GET /defi/token_security (risk check)
 ```
 
 ### Step 4: Smart Money Classification
 ```
 birdeye-smart-money → Check if wallet appears in smart money lists
-birdeye-wallet-intelligence → GET /wallet-v2-pnl (per-token performance)
+birdeye-wallet-intelligence → GET /wallet/v2/pnl (per-token performance)
 ```
 
 ### Step 5: Set Up Live Monitoring

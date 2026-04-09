@@ -31,7 +31,7 @@
 
 ## Beta Endpoints
 
-- **v1-wallet-tx_list** (150 CU) and **v1-wallet-token_list** (100 CU) are beta endpoints. They may:
+- **v1/wallet/tx_list** (150 CU) and **v1/wallet/token_list** (100 CU) are beta endpoints. They may:
   - Have higher latency
   - Return incomplete data for some chains
   - Change without notice
@@ -40,7 +40,7 @@
 ## Cross-Chain Wallets
 
 - Each query is chain-specific. To get a full multi-chain portfolio, you need to call the endpoint once per chain.
-- Use `GET /v1-wallet-list_supported_chain` to know which chains support wallet queries.
+- Use `GET /v1/wallet/list_supported_chain` to know which chains support wallet queries.
 
 ## Common Mistakes
 

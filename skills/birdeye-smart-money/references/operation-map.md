@@ -9,22 +9,21 @@ Tokens being actively traded by smart money wallets.
 
 | Param | Type | Required | Description |
 |---|---|---|---|
-| `sort_by` | string | No | Sort field: `smart_buy_volume`, `smart_sell_volume`, `smart_net_volume`, `smart_wallet_count` |
+| `interval` | string | No | Time interval: `1d`, `7d`, `30d` |
+| `trader_style` | string | No | Filter by trader style: `all`, `risk_averse`, `risk_balancers`, `trenchers` |
+| `sort_by` | string | No | Sort field: `net_flow`, `smart_traders_no`, `market_cap` |
 | `sort_type` | string | No | `asc`, `desc` |
-| `time_frame` | string | No | `24h`, `7d`, `30d` |
 | `offset` | number | No | Pagination offset |
 | `limit` | number | No | Results per page |
 
-**Key fields**: `data.items[]` → `{ address, name, symbol, price, smartBuyVolume, smartSellVolume, smartNetVolume, smartWalletCount, smartBuyWallets, smartSellWallets, signal }`, `data.total`
+**Key fields**: `data.items[]` → `{ address, name, symbol, price, netFlow, smartTradersNo, smartBuyWallets, smartSellWallets, signal }`, `data.total`
 
 **Signal interpretation**:
 
 | Field | Description |
 |---|---|
-| `smartBuyVolume` | Total USD volume bought by smart money |
-| `smartSellVolume` | Total USD volume sold by smart money |
-| `smartNetVolume` | Net flow (buy - sell). Positive = accumulation |
-| `smartWalletCount` | Number of smart money wallets involved |
+| `netFlow` | Net flow (buy - sell). Positive = accumulation |
+| `smartTradersNo` | Number of smart money traders involved |
 | `smartBuyWallets` | List of smart money wallets that bought |
 | `smartSellWallets` | List of smart money wallets that sold |
 | `signal` | Birdeye's derived signal: `accumulation`, `distribution`, `neutral` |
@@ -43,9 +42,9 @@ async function getSmartMoneyAccumulation(
   limit: number = 20
 ): Promise<any[]> {
   const params = new URLSearchParams({
-    sort_by: 'smart_net_volume',
+    sort_by: 'net_flow',
     sort_type: 'desc',
-    time_frame: timeFrame,
+    interval: timeFrame,
     limit: limit.toString(),
   });
 
@@ -63,7 +62,7 @@ async function getSmartMoneyAccumulation(
   if (!json.success) throw new Error(json.message);
 
   // Filter for tokens with positive net volume (accumulation)
-  return json.data.items.filter((t: any) => t.smartNetVolume > 0);
+  return json.data.items.filter((t: any) => t.netFlow > 0);
 }
 ```
 
@@ -76,9 +75,9 @@ async function getSmartMoneyDistribution(
   timeFrame: string = '24h'
 ): Promise<any[]> {
   const params = new URLSearchParams({
-    sort_by: 'smart_net_volume',
+    sort_by: 'net_flow',
     sort_type: 'asc',     // Ascending = most negative net volume first
-    time_frame: timeFrame,
+    interval: timeFrame,
     limit: '20',
   });
 
@@ -95,7 +94,7 @@ async function getSmartMoneyDistribution(
   const json = await res.json();
   if (!json.success) throw new Error(json.message);
 
-  return json.data.items.filter((t: any) => t.smartNetVolume < 0);
+  return json.data.items.filter((t: any) => t.netFlow < 0);
 }
 ```
 

@@ -15,13 +15,13 @@
 ## Volume Context
 
 - **Relative volume**: $500K smart money volume on a $100M market cap token is noise. The same $500K on a $1M token is significant.
-- **Net volume direction**: Always look at `smartNetVolume`, not just `smartBuyVolume` or `smartSellVolume` in isolation. A wallet that buys $1M and sells $900K is only net long $100K.
+- **Net volume direction**: Always look at `netFlow`, not just buy or sell volume in isolation. A wallet that buys $1M and sells $900K is only net long $100K.
 
-## Time Frame Selection
+## Interval Selection
 
-- **24h**: Most responsive but most noisy. Good for active trading.
-- **7d**: Better balance of signal and noise. Recommended for general analysis.
-- **30d**: Best for identifying sustained trends. May miss short-term opportunities.
+- **`1d`**: Most responsive but most noisy. Good for active trading.
+- **`7d`**: Better balance of signal and noise. Recommended for general analysis.
+- **`30d`**: Best for identifying sustained trends. May miss short-term opportunities.
 
 ## Integration Recommendations
 

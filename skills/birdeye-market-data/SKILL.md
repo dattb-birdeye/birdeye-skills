@@ -32,7 +32,7 @@ Read the relevant reference file before implementing:
 ### Endpoint Selection
 - Use `GET /defi/price` for single token current price (10 CU)
 - Use `GET /defi/multi_price` for up to 100 tokens at once (batch)
-- Use V3 OHLCV (`/defi/v3-ohlcv`) over legacy (`/defi/ohlcv`) — better performance and data quality
+- Use V3 OHLCV (`/defi/v3/ohlcv`) over legacy (`/defi/ohlcv`) — better performance and data quality
 - Use `GET /defi/token_overview` for comprehensive single-token stats (30 CU)
 - Use V3 batch endpoints (`*-multiple`) when querying multiple tokens
 
@@ -40,7 +40,7 @@ Read the relevant reference file before implementing:
 - Maximum 1000 records per request
 - Available intervals: `1m`, `3m`, `5m`, `15m`, `30m`, `1H`, `2H`, `4H`, `6H`, `8H`, `12H`, `1D`, `3D`, `1W`, `1M`
 - Always specify `time_from` and `time_to` as Unix timestamps
-- For pair-specific candles, use `/defi/v3-ohlcv-pair` with the pair address
+- For pair-specific candles, use `/defi/v3/ohlcv/pair` with the pair address
 - For base/quote candles, use `/defi/ohlcv/base_quote` with base and quote addresses
 
 ### Price Data

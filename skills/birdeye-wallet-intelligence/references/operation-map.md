@@ -48,7 +48,7 @@ Batch portfolio values for multiple wallets.
 
 ## PnL (Profit & Loss)
 
-### GET /wallet/v2/pnl-summary
+### GET /wallet/v2/pnl/summary
 Overall PnL summary for a wallet.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl-summary
@@ -59,7 +59,7 @@ Overall PnL summary for a wallet.
 
 **Key fields**: `data.{ wallet, totalPnl, totalPnlPercent, totalInvested, totalRealized, totalUnrealized, winRate, totalTrades }`
 
-### POST /wallet/v2/pnl-details
+### POST /wallet/v2/pnl/details
 Detailed gain/loss per trade.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-pnl-details
@@ -76,11 +76,11 @@ PnL breakdown per token.
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `wallet` | string | Yes | Wallet address |
-| `token_address` | string | No | Filter by specific token |
+| `token_addresses` | string | Yes | Comma-separated token addresses to filter by |
 
 **Key fields**: Per-token `{ tokenAddress, symbol, buyVolume, sellVolume, avgBuyPrice, avgSellPrice, realizedPnl, unrealizedPnl, totalPnl, pnlPercent }`
 
-### GET /wallet/v2/pnl-multiple
+### GET /wallet/v2/pnl/multiple
 Compare PnL across multiple wallets.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl-multiple
@@ -93,7 +93,7 @@ Compare PnL across multiple wallets.
 
 ## Top Traders
 
-### GET /defi-v2-tokens-top_traders
+### GET /defi/v2/tokens/top_traders
 Leading traders for a specific token.
 
 **CU Cost**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-tokens-top_traders
@@ -101,11 +101,12 @@ Leading traders for a specific token.
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `address` | string | Yes | Token address |
-| `time_frame` | string | No | `24h`, `7d`, `30d` |
-| `sort_by` | string | No | `volume`, `pnl`, `trade_count` |
-| `sort_type` | string | No | `asc`, `desc` |
+| `time_frame` | string | Yes | `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `24h` |
+| `sort_by` | string | Yes | `volume`, `trade` |
+| `sort_type` | string | Yes | `asc`, `desc` |
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
+| `ui_amount_mode` | string | No | `raw`, `scaled` |
 
 **Key fields**: `data.items[]` → `{ wallet, pnl, volume, tradeCount, buyVolume, sellVolume, tags }`
 
@@ -116,8 +117,9 @@ Top performing and worst-performing traders.
 
 | Param | Type | Required | Description |
 |---|---|---|---|
-| `time_frame` | string | No | `24h`, `7d`, `30d` |
-| `type` | string | No | `gainers`, `losers` |
+| `type` | string | Yes | Time period: `yesterday`, `today`, `1W` |
+| `sort_by` | string | Yes | `PnL` |
+| `sort_type` | string | Yes | `asc`, `desc` |
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
 
@@ -155,7 +157,7 @@ Current holdings inventory.
 |---|---|---|---|
 | `wallet` | string | Yes | Wallet address |
 
-### GET /v1-wallet-list_supported_chain
+### GET /v1/wallet/list_supported_chain
 Supported chains for wallet APIs.
 
 **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-list_supported_chain

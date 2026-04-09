@@ -37,16 +37,16 @@ You are an expert at generating comprehensive research reports and intelligence 
 ### Data Collection Order
 
 ```
-1. birdeye-token-discovery → GET /defi/v3-search (resolve token)
-2. birdeye-token-discovery → GET /defi-token_creation_info (creation details)
+1. birdeye-token-discovery → GET /defi/v3/search (resolve token)
+2. birdeye-token-discovery → GET /defi/token_creation_info (creation details)
 3. birdeye-market-data → GET /defi/token_overview (comprehensive stats)
-4. birdeye-market-data → GET /defi/v3-ohlcv (price chart data)
-5. birdeye-security-analysis → GET /defi-token_security (risk assessment)
-6. birdeye-holder-analysis → GET /defi/v3-token-holder (top holders)
-7. birdeye-holder-analysis → GET /holder-v1-distribution (distribution)
+4. birdeye-market-data → GET /defi/v3/ohlcv (price chart data)
+5. birdeye-security-analysis → GET /defi/token_security (risk assessment)
+6. birdeye-holder-analysis → GET /defi/v3/token/holder (top holders)
+7. birdeye-holder-analysis → GET /holder/v1/distribution (distribution)
 8. birdeye-smart-money → cross-reference with smart money list
-9. birdeye-wallet-intelligence → GET /defi-v2-tokens-top_traders (top traders)
-10. birdeye-market-data → GET /defi/v3-all-time-trades-single (alltime data)
+9. birdeye-wallet-intelligence → GET /defi/v2/tokens/top_traders (top traders)
+10. birdeye-market-data → GET /defi/v3/all-time/trades/single (alltime data)
 ```
 
 ### Output Format
@@ -120,12 +120,12 @@ You are an expert at generating comprehensive research reports and intelligence 
 ### Data Collection Order
 
 ```
-1. birdeye-wallet-intelligence → GET /wallet-v2-current-net-worth
-2. birdeye-wallet-intelligence → GET /wallet-v2-net-worth-details
-3. birdeye-wallet-intelligence → GET /wallet-v2-pnl-summary
-4. birdeye-wallet-intelligence → GET /wallet-v2-pnl (per-token PnL)
-5. birdeye-wallet-intelligence → POST /wallet-v2-tx-first-funded
-6. birdeye-transaction-flow → GET /trader-txs-seek_by_time (recent trades)
+1. birdeye-wallet-intelligence → GET /wallet/v2/current-net-worth
+2. birdeye-wallet-intelligence → GET /wallet/v2/net-worth-details
+3. birdeye-wallet-intelligence → GET /wallet/v2/pnl/summary
+4. birdeye-wallet-intelligence → GET /wallet/v2/pnl (per-token PnL)
+5. birdeye-wallet-intelligence → POST /wallet/v2/tx/first-funded
+6. birdeye-transaction-flow → GET /trader/txs/seek_by_time (recent trades)
 7. birdeye-smart-money → check if wallet is in smart money lists
 8. For top holdings: birdeye-security-analysis → security check each
 ```
@@ -186,7 +186,7 @@ For each token:
 ```
 birdeye-market-data → token_overview
 birdeye-security-analysis → token_security
-birdeye-holder-analysis → v3-token-holder
+birdeye-holder-analysis → v3/token/holder
 birdeye-smart-money → cross-reference
 ```
 

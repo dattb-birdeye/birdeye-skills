@@ -2,7 +2,7 @@
 
 ## Token Trades
 
-### GET /defi/v3-token-txs (Recommended)
+### GET /defi/v3/token/txs (Recommended)
 Trades for a specific token with advanced filters.
 
 **CU Cost**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-txs
@@ -10,10 +10,19 @@ Trades for a specific token with advanced filters.
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `address` | string | Yes | Token address |
-| `tx_type` | string | No | `swap`, `add`, `remove` (trade type filter) |
-| `sort_type` | string | No | `asc`, `desc` |
+| `tx_type` | string | No | `swap`, `buy`, `sell`, `add`, `remove`, `all` |
+| `sort_by` | string | No | `block_unix_time`, `block_number` |
+| `sort_type` | string | No | `desc` |
+| `source` | string | No | DEX source filter (e.g. `raydium`, `orca`, `pump_dot_fun`) |
+| `owner` | string | No | Filter by wallet address |
+| `pool_id` | string | No | Filter by pool/pair address |
+| `before_time` | number | No | End Unix timestamp |
+| `after_time` | number | No | Start Unix timestamp |
+| `before_block_number` | number | No | End block number |
+| `after_block_number` | number | No | Start block number |
 | `offset` | number | No | Pagination offset |
 | `limit` | number | No | Results per page (max 50) |
+| `ui_amount_mode` | string | No | `raw`, `scaled` |
 
 **Key fields**: `data.items[]` → `{ txHash, blockUnixTime, source, owner, from: { address, symbol, amount, uiAmount, price }, to: { ... }, volumeUSD, side }`, `data.hasNext`
 
@@ -22,12 +31,12 @@ Trades filtered by minimum volume.
 
 **CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-txs-by-volume
 
-Same params as v3-token-txs, plus:
+Same params as v3/token/txs, plus:
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `min_volume` | number | No | Minimum trade volume in USD |
 
-### GET /defi/txs-token (Legacy)
+### GET /defi/txs/token (Legacy)
 Legacy token trades endpoint.
 
 **CU Cost**: 10 | **Docs**: https://docs.birdeye.so/reference/get-defi-txs-token
@@ -40,7 +49,7 @@ Legacy token trades endpoint.
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
 
-### GET /defi/txs-token-seek_by_time
+### GET /defi/txs/token/seek_by_time
 Token trades within a time range.
 
 **CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-txs-token-seek_by_time
@@ -59,7 +68,7 @@ Token trades within a time range.
 
 ## Pair Trades
 
-### GET /defi/txs-pair
+### GET /defi/txs/pair
 Trades for a specific trading pair.
 
 **CU Cost**: 10 | **Docs**: https://docs.birdeye.so/reference/get-defi-txs-pair
@@ -72,18 +81,18 @@ Trades for a specific trading pair.
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
 
-### GET /defi/txs-pair-seek_by_time
+### GET /defi/txs/pair/seek_by_time
 Pair trades within a time range.
 
 **CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-txs-pair-seek_by_time
 
-Same params as txs-pair, plus `before_time`, `after_time`.
+Same params as txs/pair, plus `before_time`, `after_time`.
 
 ---
 
 ## All Trades
 
-### GET /defi/v3-txs
+### GET /defi/v3/txs
 All trades across the chain with filters.
 
 **CU Cost**: 25 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-txs
@@ -95,12 +104,12 @@ All trades across the chain with filters.
 | `offset` | number | No | Offset |
 | `limit` | number | No | Max results |
 
-### GET /defi/v3-txs-recent
+### GET /defi/v3/txs/recent
 Most recent trades on the chain.
 
 **CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-txs-recent
 
-Similar params to v3-txs with limit.
+Similar params to v3/txs with limit.
 
 ---
 
@@ -173,7 +182,7 @@ Token transfer history.
 
 **Key fields**: `data.items[]` → `{ txHash, blockUnixTime, from, to, tokenAddress, symbol, amount, uiAmount, valueUSD }`
 
-### POST /token/v1/transfer-total
+### POST /token/v1/transfer/total
 Aggregated transfer volumes.
 
 **Docs**: https://docs.birdeye.so/reference/post-token-v1-transfer-total
@@ -189,7 +198,7 @@ Wallet-centric transfer history.
 
 **Body**: `{ "wallet": "wallet_address", "offset": 0, "limit": 50 }`
 
-### POST /wallet/v2/transfer-total
+### POST /wallet/v2/transfer/total
 Wallet transfer summary.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-transfer-total
@@ -212,7 +221,7 @@ Current latest block number.
 
 **Key fields**: `data.{ block, unixTime }`
 
-### GET /defi-networks
+### GET /defi/networks
 List of supported blockchain networks.
 
 **CU Cost**: 1 | **Docs**: https://docs.birdeye.so/reference/get-defi-networks

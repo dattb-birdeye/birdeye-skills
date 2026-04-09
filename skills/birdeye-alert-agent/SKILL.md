@@ -162,7 +162,7 @@ async function setupNewListingAlert(ws: BirdeyeWebSocket, config: {
     // Security check via REST
     try {
       const secRes = await fetch(
-        `https://public-api.birdeye.so/defi-token_security?address=${token.address}`,
+        `https://public-api.birdeye.so/defi/token_security?address=${token.address}`,
         { headers: { 'X-API-KEY': config.apiKey, 'x-chain': 'solana' } }
       );
       const secData = await secRes.json();
@@ -216,15 +216,15 @@ async function pollSmartMoneyAlerts(config: {
 
   setInterval(async () => {
     const res = await fetch(
-      `https://public-api.birdeye.so/smart-money-v1-token-list?sort_by=smart_net_volume&sort_type=desc&time_frame=24h&limit=20`,
+      `https://public-api.birdeye.so/smart-money/v1/token/list?sort_by=net_flow&sort_type=desc&interval=1d&limit=20`,
       { headers: { 'X-API-KEY': config.apiKey, 'x-chain': 'solana' } }
     );
     const data = await res.json();
 
     for (const token of data.data.items) {
       if (
-        token.smartNetVolume >= config.minNetVolume &&
-        token.smartWalletCount >= config.minWalletCount &&
+        token.netFlow >= config.minNetVolume &&
+        token.smartTradersNo >= config.minWalletCount &&
         !seenTokens.has(token.address)
       ) {
         seenTokens.add(token.address);
@@ -232,8 +232,8 @@ async function pollSmartMoneyAlerts(config: {
           type: 'smart_money_accumulation',
           token: token.symbol,
           address: token.address,
-          netVolume: token.smartNetVolume,
-          walletCount: token.smartWalletCount,
+          netVolume: token.netFlow,
+          walletCount: token.smartTradersNo,
           signal: token.signal,
         });
       }

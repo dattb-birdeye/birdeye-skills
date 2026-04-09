@@ -23,7 +23,7 @@ You are an expert at evaluating token security using Birdeye APIs. This skill co
 ## Rules
 
 ### Primary Endpoint
-- `GET /defi-token_security` — security audit and risk assessment (50 CU)
+- `GET /defi/token_security` — security audit and risk assessment (50 CU)
 - This is the only security-specific endpoint. For deeper analysis, combine with:
   - `birdeye-holder-analysis` (concentration risk)
   - `birdeye-market-data` (liquidity analysis)

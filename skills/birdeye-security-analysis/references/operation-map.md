@@ -2,7 +2,7 @@
 
 ## Token Security
 
-### GET /defi-token_security
+### GET /defi/token_security
 Security audit and risk assessment for a token.
 
 **CU Cost**: 50 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_security
@@ -50,7 +50,7 @@ async function fullSecurityAnalysis(
 
   // 1. Security data (50 CU)
   const securityRes = await fetch(
-    `https://public-api.birdeye.so/defi-token_security?address=${tokenAddress}`,
+    `https://public-api.birdeye.so/defi/token_security?address=${tokenAddress}`,
     { headers }
   );
   const security = await securityRes.json();

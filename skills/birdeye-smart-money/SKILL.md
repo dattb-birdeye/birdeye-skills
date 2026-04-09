@@ -23,7 +23,7 @@ You are an expert at tracking smart money activity using Birdeye APIs. This skil
 ## Rules
 
 ### Primary Endpoint
-- `GET /smart-money-v1-token-list` — tokens being accumulated/distributed by smart money wallets
+- `GET /smart-money/v1/token/list` — tokens being accumulated/distributed by smart money wallets
 
 ### What is "Smart Money"?
 Birdeye classifies wallets as "smart money" based on:

@@ -31,7 +31,15 @@ Distribution of holders by balance ranges.
 
 | Param | Type | Required | Description |
 |---|---|---|---|
-| `address` | string | Yes | Token address |
+| `token_address` | string | Yes | Token address |
+| `address_type` | string | No | Address type: `wallet`, `token_account` |
+| `mode` | string | No | Distribution mode: `percent`, `top` |
+| `top_n` | number | No | Top N holders to include (for `top` mode) |
+| `min_percent` | number | No | Min percent filter |
+| `max_percent` | number | No | Max percent filter |
+| `include_list` | boolean | No | Include holder list in response |
+| `offset` | number | No | Pagination offset |
+| `limit` | number | No | Results per page |
 
 **Key fields**: `data.distribution[]` → `{ range, holderCount, percentage, totalAmount }`, `data.totalHolder`, `data.totalSupply`
 

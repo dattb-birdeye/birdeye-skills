@@ -67,12 +67,12 @@ V3 OHLCV candles for a token. Preferred over legacy endpoint.
 
 **Key fields**: `data.items[]` → `{ o, h, l, c, v, unixTime, type, address }`
 
-### GET /defi/v3/ohlcv-pair
+### GET /defi/v3/ohlcv/pair
 V3 OHLCV for a specific trading pair.
 
 **CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv-pair
 
-Same params as v3-ohlcv but `address` is the pair address.
+Same params as v3/ohlcv but `address` is the pair address.
 
 ### GET /defi/ohlcv (Legacy)
 Legacy OHLCV endpoint. Max 1000 records.
@@ -183,7 +183,7 @@ Market data for a single token.
 
 **Key fields**: `data.{ marketCap, fullyDilutedValuation, liquidity, totalSupply, circulatingSupply }`
 
-### GET /defi/v3/token/market-data-multiple
+### GET /defi/v3/token/market-data/multiple
 Batch market data.
 
 **CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data-multiple
@@ -221,7 +221,7 @@ Exit liquidity analysis.
 |---|---|---|---|
 | `address` | string | Yes | Token address |
 
-### GET /defi/v3/token/exit-liquidity-multiple
+### GET /defi/v3/token/exit-liquidity/multiple
 Batch exit liquidity.
 
 **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-exit-liquidity-multiple

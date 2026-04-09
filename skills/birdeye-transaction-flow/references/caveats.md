@@ -2,9 +2,9 @@
 
 ## V3 vs Legacy Trade Endpoints
 
-- **Prefer V3**: `/defi/v3-token-txs` (20 CU) returns richer data than `/defi/txs-token` (10 CU). The extra 10 CU buys better filtering and more fields.
+- **Prefer V3**: `/defi/v3/token/txs` (20 CU) returns richer data than `/defi/txs/token` (10 CU). The extra 10 CU buys better filtering and more fields.
 - **seek_by_time**: Use the `seek_by_time` variants when you need time-bounded queries. The standard endpoints paginate by offset only.
-- **Volume-filtered trades**: `/defi/v3-token-txs-by-volume` is purpose-built for finding whale trades. Don't use the standard endpoint and filter client-side — wasteful.
+- **Volume-filtered trades**: `/defi/v3/token/txs-by-volume` is purpose-built for finding whale trades. Don't use the standard endpoint and filter client-side — wasteful.
 
 ## Trade Direction (side field)
 

@@ -24,19 +24,19 @@ You are an expert at analyzing token holder data using Birdeye APIs. This skill 
 ## Rules
 
 ### Endpoint Selection
-- `GET /defi/v3-token-holder` — paginated list of holders with balances
-- `POST /token-v1-holder-batch` — batch holder data for multiple tokens
-- `GET /holder-v1-distribution` — holder distribution by balance ranges
+- `GET /defi/v3/token/holder` — paginated list of holders with balances
+- `POST /token/v1/holder/batch` — batch holder data for multiple tokens
+- `GET /holder/v1/distribution` — holder distribution by balance ranges
 
 ### Analysis Patterns
 
 **Holder Concentration**:
-1. Get top holders via `/defi/v3-token-holder` sorted by balance
+1. Get top holders via `/defi/v3/token/holder` sorted by balance
 2. Calculate top 10/top 50 concentration percentage
 3. High concentration (>50% in top 10) = centralization risk
 
 **Distribution Health**:
-1. Get distribution via `/holder-v1-distribution`
+1. Get distribution via `/holder/v1/distribution`
 2. Healthy distribution: many small holders, few whales
 3. Unhealthy: extreme concentration in 1-3 wallets
 
