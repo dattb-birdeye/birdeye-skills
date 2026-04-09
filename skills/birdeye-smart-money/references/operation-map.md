@@ -1,108 +1,79 @@
 # Smart Money — Operation Map
 
+> **Params source of truth**: [`birdeye-indexer/references/canonical-endpoint-dictionary.md`](../../../birdeye-indexer/references/canonical-endpoint-dictionary.md)
+> Each entry below lists: description · CU · Docs URL · minimal curl · response fields.
+
+---
+
 ## Smart Money Token List
 
 ### GET /smart-money/v1/token/list
-Tokens being actively traded by smart money wallets.
+Tokens being actively traded by smart money wallets. Solana only.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-smart-money-v1-token-list
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-smart-money-v1-token-list
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `interval` | string | No | Time interval: `1d`, `7d`, `30d` |
-| `trader_style` | string | No | Filter by trader style: `all`, `risk_averse`, `risk_balancers`, `trenchers` |
-| `sort_by` | string | No | Sort field: `net_flow`, `smart_traders_no`, `market_cap` |
-| `sort_type` | string | No | `asc`, `desc` |
-| `offset` | number | No | Pagination offset |
-| `limit` | number | No | Results per page |
+```bash
+# Accumulation: sort by net_flow desc
+curl -sS "https://public-api.birdeye.so/smart-money/v1/token/list?interval=1d&sort_by=net_flow&sort_type=desc&limit=20" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
 
-**Key fields**: `data.items[]` → `{ address, name, symbol, price, netFlow, smartTradersNo, smartBuyWallets, smartSellWallets, signal }`, `data.total`
+# Distribution: sort by net_flow asc
+curl -sS "https://public-api.birdeye.so/smart-money/v1/token/list?interval=1d&sort_by=net_flow&sort_type=asc&limit=20" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Signal interpretation**:
+**Response**: `data.items[] → { address, name, symbol, price, netFlow, smartTradersNo, smartBuyWallets, smartSellWallets, signal }`, `data.total`
+
+**Signal fields**:
 
 | Field | Description |
 |---|---|
-| `netFlow` | Net flow (buy - sell). Positive = accumulation |
-| `smartTradersNo` | Number of smart money traders involved |
-| `smartBuyWallets` | List of smart money wallets that bought |
-| `smartSellWallets` | List of smart money wallets that sold |
-| `signal` | Birdeye's derived signal: `accumulation`, `distribution`, `neutral` |
+| `netFlow` | Net volume (buy − sell). Positive = accumulation, negative = distribution |
+| `smartTradersNo` | Number of distinct smart money wallets trading this token |
+| `smartBuyWallets` | Wallets that bought |
+| `smartSellWallets` | Wallets that sold |
+| `signal` | Birdeye-derived signal: `accumulation`, `distribution`, `neutral` |
 
 ---
 
 ## Usage Patterns
 
-### Find Tokens Smart Money is Accumulating
+### Find Accumulating Tokens
 
 ```typescript
-async function getSmartMoneyAccumulation(
-  apiKey: string,
-  chain: string = 'solana',
-  timeFrame: string = '24h',
-  limit: number = 20
-): Promise<any[]> {
-  const params = new URLSearchParams({
-    sort_by: 'net_flow',
-    sort_type: 'desc',
-    interval: timeFrame,
-    limit: limit.toString(),
-  });
+const params = new URLSearchParams({
+  interval: '1d',     // 1d | 7d | 30d
+  sort_by: 'net_flow',
+  sort_type: 'desc',
+  limit: '20',
+});
 
-  const url = `https://public-api.birdeye.so/smart-money/v1/token/list?${params}`;
-
-  const res = await fetch(url, {
-    headers: {
-      'X-API-KEY': apiKey,
-      'x-chain': chain,
-      'accept': 'application/json',
-    },
-  });
-
-  const json = await res.json();
-  if (!json.success) throw new Error(json.message);
-
-  // Filter for tokens with positive net volume (accumulation)
-  return json.data.items.filter((t: any) => t.netFlow > 0);
-}
+const res = await fetch(
+  `https://public-api.birdeye.so/smart-money/v1/token/list?${params}`,
+  { headers: { 'X-API-KEY': process.env.BIRDEYE_API_KEY!, 'x-chain': 'solana', 'accept': 'application/json' } }
+);
+const json = await res.json();
+const accumulating = json.data.items.filter((t: any) => t.netFlow > 0);
 ```
 
-### Find Tokens Smart Money is Dumping
+### Filter by Trader Style
 
 ```typescript
-async function getSmartMoneyDistribution(
-  apiKey: string,
-  chain: string = 'solana',
-  timeFrame: string = '24h'
-): Promise<any[]> {
-  const params = new URLSearchParams({
-    sort_by: 'net_flow',
-    sort_type: 'asc',     // Ascending = most negative net volume first
-    interval: timeFrame,
-    limit: '20',
-  });
-
-  const url = `https://public-api.birdeye.so/smart-money/v1/token/list?${params}`;
-
-  const res = await fetch(url, {
-    headers: {
-      'X-API-KEY': apiKey,
-      'x-chain': chain,
-      'accept': 'application/json',
-    },
-  });
-
-  const json = await res.json();
-  if (!json.success) throw new Error(json.message);
-
-  return json.data.items.filter((t: any) => t.netFlow < 0);
-}
+// risk_averse | risk_balancers | trenchers | all
+const params = new URLSearchParams({
+  interval: '1d',
+  trader_style: 'risk_averse',
+  sort_by: 'smart_traders_no',
+  sort_type: 'desc',
+  limit: '20',
+});
 ```
 
-### Track Specific Smart Money Wallets
+### Track Wallet Activity from Smart Money Results
 
-To track what specific smart money wallets are doing:
+Smart money API returns tokens, not wallets. To dig into individual wallet behaviour:
 
-1. Get smart money wallets from the token list response (`smartBuyWallets`, `smartSellWallets`)
-2. Use `birdeye-wallet-intelligence` skill to analyze each wallet's portfolio and PnL
-3. Use `birdeye-transaction-flow` skill to see their recent trades
-4. Use `birdeye-realtime-streams` skill (`SUBSCRIBE_WALLET_TXS`) to monitor in real-time
+1. Get `smartBuyWallets` / `smartSellWallets` from the token list response
+2. Use `birdeye-wallet-intelligence` → `GET /wallet/v2/pnl` to analyze each wallet's performance
+3. Use `birdeye-transaction-flow` → `GET /trader/txs/seek_by_time` to see their recent trades
+4. Use `birdeye-realtime-streams` → `SUBSCRIBE_WALLET_TXS` to monitor in real time

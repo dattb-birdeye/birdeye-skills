@@ -24,7 +24,10 @@ You are an expert at discovering and searching tokens using Birdeye APIs. This s
 | Get token creation info | `references/operation-map.md` → Creation Info |
 | Browse meme tokens | `references/operation-map.md` → Meme |
 | Check API credit usage | `references/operation-map.md` → Utils |
+| Which endpoint to use for your intent | `references/endpoint-playbook.md` |
+| Copy-paste curl/fetch examples | `references/request-templates.md` |
 | Common issues | `references/caveats.md` |
+| Exact endpoint params, chain support, curl | `birdeye-indexer` skill → `references/canonical-endpoint-dictionary.md` |
 
 ## Rules
 

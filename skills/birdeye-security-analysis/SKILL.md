@@ -18,7 +18,10 @@ You are an expert at evaluating token security using Birdeye APIs. This skill co
 |---|---|
 | Token security check | `references/operation-map.md` → Token Security |
 | Risk flag interpretation | `references/risk-flags.md` |
+| Which endpoint to use for your intent | `references/endpoint-playbook.md` |
+| Copy-paste curl/fetch examples | `references/request-templates.md` |
 | Common issues | `references/caveats.md` |
+| Exact endpoint params, chain support, curl | `birdeye-indexer` skill → `references/canonical-endpoint-dictionary.md` |
 
 ## Rules
 

@@ -1,98 +1,80 @@
 # Holder Analysis — Operation Map
 
+> **Params source of truth**: [`birdeye-indexer/references/canonical-endpoint-dictionary.md`](../../../birdeye-indexer/references/canonical-endpoint-dictionary.md)
+> Each entry below lists: description · CU · Docs URL · minimal curl · response fields.
+
+---
+
 ## Token Holder
 
 ### GET /defi/v3/token/holder
-Paginated list of token holders with balances.
+Paginated list of token holders with balances and percentages. Solana only.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-holder
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-holder
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `offset` | number | No | Pagination offset (default: 0) |
-| `limit` | number | No | Results per page (max 100) |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/holder?address=<TOKEN>&limit=50" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.items[]` → `{ address, amount (string), uiAmount, decimals, percentage, owner, rank }`, `data.totalHolder`, `data.hasNext`
+**Response**: `data.items[] → { address, amount (string), uiAmount, decimals, percentage, owner, rank }`, `data.totalHolder`, `data.hasNext`
 
 **Notes**:
-- `amount`: Raw token amount (string to preserve precision for large numbers)
-- `uiAmount`: Human-readable amount (amount / 10^decimals)
-- `percentage`: Percentage of total supply held
+- `amount`: raw integer as string (preserves precision for large supply tokens)
+- `uiAmount`: human-readable (amount / 10^decimals)
+- `percentage`: fraction of total supply held by this wallet
 
 ---
 
 ## Holder Distribution
 
 ### GET /holder/v1/distribution
-Distribution of holders by balance ranges.
+Holder distribution bucketed by balance range. Solana only.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-holder-v1-distribution
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-holder-v1-distribution
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `token_address` | string | Yes | Token address |
-| `address_type` | string | No | Address type: `wallet`, `token_account` |
-| `mode` | string | No | Distribution mode: `percent`, `top` |
-| `top_n` | number | No | Top N holders to include (for `top` mode) |
-| `min_percent` | number | No | Min percent filter |
-| `max_percent` | number | No | Max percent filter |
-| `include_list` | boolean | No | Include holder list in response |
-| `offset` | number | No | Pagination offset |
-| `limit` | number | No | Results per page |
+```bash
+curl -sS "https://public-api.birdeye.so/holder/v1/distribution?token_address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.distribution[]` → `{ range, holderCount, percentage, totalAmount }`, `data.totalHolder`, `data.totalSupply`
+**Response**: `data.distribution[] → { range, holderCount, percentage, totalAmount }`, `data.totalHolder`, `data.totalSupply`
 
 ---
 
 ## Batch Holder
 
 ### POST /token/v1/holder/batch
-Batch holder data for multiple tokens.
+Batch holder summary for multiple tokens in one call.
 
-**CU Cost**: Variable per token | **Docs**: https://docs.birdeye.so/reference/post-token-v1-holder-batch
+**CU**: variable/token | **Docs**: https://docs.birdeye.so/reference/post-token-v1-holder-batch
 
-**Body**: `{ "list_address": ["token_addr_1", "token_addr_2"] }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/token/v1/holder/batch" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"list_address": ["<TOKEN1>", "<TOKEN2>"]}'
+```
 
-**Key fields**: Array of holder summaries per token with `totalHolder`, top holders, and concentration metrics.
+**Response**: array of holder summaries per token with `totalHolder`, top holders, and concentration metrics
 
 ---
 
-## Derived Analysis Patterns
+## Analysis Patterns
 
-### Concentration Score Calculation
+### Concentration Score
 
 ```typescript
-async function getConcentrationScore(
-  apiKey: string,
-  tokenAddress: string,
-  chain: string = 'solana'
-): Promise<{
-  top10Pct: number;
-  top50Pct: number;
-  risk: 'low' | 'medium' | 'high';
-}> {
-  const url = `https://public-api.birdeye.so/defi/v3/token/holder?address=${tokenAddress}&limit=50`;
-
-  const res = await fetch(url, {
-    headers: {
-      'X-API-KEY': apiKey,
-      'x-chain': chain,
-      'accept': 'application/json',
-    },
-  });
-
+async function getConcentrationScore(apiKey: string, tokenAddress: string) {
+  const res = await fetch(
+    `https://public-api.birdeye.so/defi/v3/token/holder?address=${tokenAddress}&limit=50`,
+    { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana', 'accept': 'application/json' } }
+  );
   const json = await res.json();
-  if (!json.success) throw new Error(json.message);
-
   const holders = json.data.items;
-  const top10Pct = holders.slice(0, 10).reduce((sum: number, h: any) => sum + h.percentage, 0);
-  const top50Pct = holders.slice(0, 50).reduce((sum: number, h: any) => sum + h.percentage, 0);
 
-  let risk: 'low' | 'medium' | 'high';
-  if (top10Pct > 80) risk = 'high';
-  else if (top10Pct > 50) risk = 'medium';
-  else risk = 'low';
+  const top10Pct = holders.slice(0, 10).reduce((s: number, h: any) => s + h.percentage, 0);
+  const top50Pct = holders.slice(0, 50).reduce((s: number, h: any) => s + h.percentage, 0);
+  const risk = top10Pct > 0.8 ? 'high' : top10Pct > 0.5 ? 'medium' : 'low';
 
   return { top10Pct, top50Pct, risk };
 }
@@ -101,20 +83,16 @@ async function getConcentrationScore(
 ### Distribution Health Score
 
 ```typescript
-function assessDistribution(distribution: any[]): {
-  score: number;     // 0-100 (higher = healthier)
-  verdict: string;
-} {
-  const totalHolders = distribution.reduce((sum, d) => sum + d.holderCount, 0);
-  const smallHolderPct = (distribution[0]?.holderCount || 0) / totalHolders;
-  const whaleHolderPct = (distribution[distribution.length - 1]?.holderCount || 0) / totalHolders;
+function assessDistribution(distribution: any[]): { score: number; verdict: string } {
+  const total = distribution.reduce((s, d) => s + d.holderCount, 0);
+  const smallHolderPct = (distribution[0]?.holderCount || 0) / total;
+  const whaleHolderPct = (distribution[distribution.length - 1]?.holderCount || 0) / total;
 
   const score = Math.min(100, Math.round(smallHolderPct * 80 + (1 - whaleHolderPct) * 20));
-
-  let verdict: string;
-  if (score > 70) verdict = 'Healthy — well distributed across many holders';
-  else if (score > 40) verdict = 'Moderate — some concentration in large holders';
-  else verdict = 'Concentrated — dominated by few wallets, higher risk';
+  const verdict =
+    score > 70 ? 'Healthy — well distributed' :
+    score > 40 ? 'Moderate — some whale concentration' :
+    'Concentrated — dominated by few wallets';
 
   return { score, verdict };
 }

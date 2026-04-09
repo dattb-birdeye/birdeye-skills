@@ -1,289 +1,338 @@
 # Market Data — Operation Map
 
-## Price Endpoints
+> **Params source of truth**: [`birdeye-indexer/references/canonical-endpoint-dictionary.md`](../../../birdeye-indexer/references/canonical-endpoint-dictionary.md)
+> Each entry below lists: description · CU · Docs URL · minimal curl · response fields.
+
+---
+
+## Price
 
 ### GET /defi/price
-Get current price of a single token.
+Current price of a single token.
 
-**CU Cost**: 10 | **Docs**: https://docs.birdeye.so/reference/get-defi-price
+**CU**: 10 | **Docs**: https://docs.birdeye.so/reference/get-defi-price
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token contract address |
-| `include_liquidity` | boolean | No | Include liquidity info |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/price?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.value` (price USD), `data.updateUnixTime`, `data.liquidity`, `data.priceChange24h`
+**Response**: `data.{ value, updateUnixTime, liquidity, priceChange24h }`
+
+---
 
 ### GET /defi/multi_price
-Get current prices for multiple tokens (max 100).
+Current prices for multiple tokens (max 100). Cheaper than looping single-price calls.
 
-**CU Cost**: 10 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-multi_price
+**CU**: 10/token | **Docs**: https://docs.birdeye.so/reference/get-defi-multi_price
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `list_address` | string | Yes | Comma-separated token addresses (max 100) |
-| `include_liquidity` | boolean | No | Include liquidity info |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/multi_price?list_address=<ADDR1>,<ADDR2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data[address].value`, `data[address].updateUnixTime`, `data[address].priceChange24h`
+**Response**: `data[address].{ value, updateUnixTime, priceChange24h }`
+
+---
 
 ### POST /defi/multi_price
-Same as GET but accepts addresses in request body for larger payloads.
+Same as GET multi_price but accepts body — use when address list is too long for query string.
 
-**Docs**: https://docs.birdeye.so/reference/post-defi-multi_price
+**CU**: 10/token | **Docs**: https://docs.birdeye.so/reference/post-defi-multi_price
 
-**Body**: `{ "list_address": "addr1,addr2,addr3" }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/defi/multi_price" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"list_address": "<ADDR1>,<ADDR2>"}'
+```
+
+**Response**: same as GET multi_price
+
+---
 
 ### GET /defi/price_volume/single
-Combined price and volume data for a single token.
+Combined price and volume in one call. `type` param sets the time window.
 
-**CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-price_volume-single
+**CU**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-price_volume-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/price_volume/single?address=<TOKEN>&type=24h" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+**Response**: `data.{ price, volume, updateUnixTime }`
+
+---
 
 ### POST /defi/price_volume/multi
-Combined price and volume for multiple tokens.
+Batch price + volume for multiple tokens.
 
-**CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/post-defi-price_volume-multi
+**CU**: 15/token | **Docs**: https://docs.birdeye.so/reference/post-defi-price_volume-multi
 
-**Body**: `{ "list_address": "addr1,addr2" }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/defi/price_volume/multi" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"list_address": "<ADDR1>,<ADDR2>"}'
+```
 
 ---
 
-## OHLCV Endpoints
+## OHLCV
 
-### GET /defi/v3/ohlcv (Recommended)
-V3 OHLCV candles for a token. Preferred over legacy endpoint.
+### GET /defi/v3/ohlcv
+Candle data for a token (all pools aggregated). Preferred over legacy endpoint.
 
-**CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv
+**CU**: dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `type` | string | Yes | Interval: `1m`,`3m`,`5m`,`15m`,`30m`,`1H`,`2H`,`4H`,`6H`,`8H`,`12H`,`1D`,`3D`,`1W`,`1M` |
-| `time_from` | number | Yes | Start Unix timestamp |
-| `time_to` | number | Yes | End Unix timestamp |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/ohlcv?address=<TOKEN>&type=1H&time_from=<TS>&time_to=<TS>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.items[]` → `{ o, h, l, c, v, unixTime, type, address }`
+**Response**: `data.items[] → { o, h, l, c, v, unixTime, type, address }`
+
+---
 
 ### GET /defi/v3/ohlcv/pair
-V3 OHLCV for a specific trading pair.
+Candle data for a specific DEX pool. Same params as v3/ohlcv but `address` is the pair address.
 
-**CU Cost**: Dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv-pair
+**CU**: dynamic | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-ohlcv-pair
 
-Same params as v3/ohlcv but `address` is the pair address.
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/ohlcv/pair?address=<PAIR>&type=1H&time_from=<TS>&time_to=<TS>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-### GET /defi/ohlcv (Legacy)
-Legacy OHLCV endpoint. Max 1000 records.
+**Response**: same shape as v3/ohlcv
 
-**CU Cost**: 40 | **Docs**: https://docs.birdeye.so/reference/get-defi-ohlcv
-
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `type` | string | Yes | Interval |
-| `time_from` | number | Yes | Start Unix timestamp |
-| `time_to` | number | Yes | End Unix timestamp |
-
-### GET /defi/ohlcv/pair (Legacy)
-Legacy pair OHLCV. Max 1000 records.
-
-**CU Cost**: 40 | **Docs**: https://docs.birdeye.so/reference/get-defi-ohlcv-pair
-
-Same params as legacy ohlcv but `address` is pair address.
+---
 
 ### GET /defi/ohlcv/base_quote
-OHLCV for a base/quote pair by individual token addresses.
+Candle data by specifying base and quote token addresses separately.
 
-**CU Cost**: 40 | **Docs**: https://docs.birdeye.so/reference/get-defi-ohlcv-base_quote
+**CU**: 40 | **Docs**: https://docs.birdeye.so/reference/get-defi-ohlcv-base_quote
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `base_address` | string | Yes | Base token address |
-| `quote_address` | string | Yes | Quote token address |
-| `type` | string | Yes | Interval |
-| `time_from` | number | Yes | Start Unix timestamp |
-| `time_to` | number | Yes | End Unix timestamp |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/ohlcv/base_quote?base_address=<BASE>&quote_address=<QUOTE>&type=1H&time_from=<TS>&time_to=<TS>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+**Response**: `data.items[] → { o, h, l, c, v, unixTime }`
 
 ---
 
-## Historical Price Endpoints
+## Historical Price
 
 ### GET /defi/history_price
-Historical price data at intervals.
+Price history at intervals over a time range. Expensive — use `historical_price_unix` for single point.
 
-**CU Cost**: 60 (expensive) | **Docs**: https://docs.birdeye.so/reference/get-defi-history_price
+**CU**: 60 | **Docs**: https://docs.birdeye.so/reference/get-defi-history_price
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `address_type` | string | No | `token` or `pair` |
-| `type` | string | Yes | Interval (`1m`, `5m`, `15m`, `30m`, `1H`, `4H`, `1D`, `1W`) |
-| `time_from` | number | Yes | Start Unix timestamp |
-| `time_to` | number | Yes | End Unix timestamp |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/history_price?address=<TOKEN>&address_type=token&type=1H&time_from=<TS>&time_to=<TS>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.items[]` → `{ unixTime, value }`
-
-### GET /defi/historical_price_unix
-Price at a specific Unix timestamp.
-
-**CU Cost**: 10 (cheap) | **Docs**: https://docs.birdeye.so/reference/get-defi-historical_price_unix
-
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `unixtime` | number | Yes | Target Unix timestamp |
-
-**Key fields**: `data.value` (price USD), `data.unixTime`
+**Response**: `data.items[] → { unixTime, value }`
 
 ---
 
-## Stats Endpoints
+### GET /defi/historical_price_unix
+Price at a single specific timestamp. Cheap alternative to history_price for point-in-time lookup.
+
+**CU**: 10 | **Docs**: https://docs.birdeye.so/reference/get-defi-historical_price_unix
+
+```bash
+curl -sS "https://public-api.birdeye.so/defi/historical_price_unix?address=<TOKEN>&unixtime=<TS>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+**Response**: `data.{ value, unixTime }`
+
+---
+
+## Stats & Metadata
 
 ### GET /defi/token_overview
-Comprehensive token statistics.
+All-in-one token stats: price, volume, liquidity, market cap, supply, holders, 24h changes.
 
-**CU Cost**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_overview
+**CU**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_overview
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/token_overview?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ price, priceChange24h, volume24h, liquidity, marketCap, holder, supply, name, symbol, decimals, logoURI, extensions, ... }` — 30+ fields, see docs for full list.
+**Response**: `data.{ price, priceChange24h, volume24h, liquidity, marketCap, holder, supply, name, symbol, decimals, logoURI, ... }` (30+ fields — verify via docs before parsing)
+
+---
 
 ### GET /defi/v3/token/meta-data/single
-Token metadata only.
+Token name, symbol, decimals, logo only. 5 CU vs 30 for token_overview.
 
-**CU Cost**: 5 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meta-data-single
+**CU**: 5 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meta-data-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ name, symbol, decimals, logoURI, extensions }`
+**Response**: `data.{ name, symbol, decimals, logoURI, extensions }`
+
+---
 
 ### GET /defi/v3/token/meta-data/multiple
-Batch token metadata.
+Batch metadata for up to 100 tokens.
 
-**CU Cost**: 5 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meta-data-multiple
+**CU**: 5/token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meta-data-multiple
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `list_address` | string | Yes | Comma-separated addresses (max 100) |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/meta-data/multiple?list_address=<ADDR1>,<ADDR2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+**Response**: `data[address].{ name, symbol, decimals, logoURI }`
+
+---
 
 ### GET /defi/v3/token/market-data
-Market data for a single token.
+Market cap, FDV, liquidity, supply for one token.
 
-**CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data
+**CU**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/market-data?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ marketCap, fullyDilutedValuation, liquidity, totalSupply, circulatingSupply }`
+**Response**: `data.{ marketCap, fullyDilutedValuation, liquidity, totalSupply, circulatingSupply }`
+
+---
 
 ### GET /defi/v3/token/market-data/multiple
-Batch market data.
+Batch market data for up to 100 tokens.
 
-**CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data-multiple
+**CU**: 15/token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-market-data-multiple
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `list_address` | string | Yes | Comma-separated addresses |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/market-data/multiple?list_address=<ADDR1>,<ADDR2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### GET /defi/v3/token/trade-data/single
-Trading metrics for a single token.
+Buy/sell counts, volumes, unique traders.
 
-**CU Cost**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-single
+**CU**: 15 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/trade-data/single?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ buy24h, sell24h, buyVolume24h, sellVolume24h, uniqueBuyer24h, uniqueSeller24h, tradeCount24h }`
+**Response**: `data.{ buy24h, sell24h, buyVolume24h, sellVolume24h, uniqueBuyer24h, uniqueSeller24h, tradeCount24h }`
+
+---
 
 ### GET /defi/v3/token/trade-data/multiple
-Batch trade data.
+Batch trade metrics for up to 100 tokens.
 
-**CU Cost**: 15 per token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-multiple
+**CU**: 15/token | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-trade-data-multiple
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `list_address` | string | Yes | Comma-separated addresses |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/trade-data/multiple?list_address=<ADDR1>,<ADDR2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### GET /defi/v3/token/exit-liquidity
-Exit liquidity analysis.
+Exit liquidity analysis for a token. Base chain only.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-exit-liquidity
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-exit-liquidity
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/exit-liquidity?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: base" -H "accept: application/json"
+```
 
-### GET /defi/v3/token/exit-liquidity/multiple
-Batch exit liquidity.
-
-**Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-exit-liquidity-multiple
-
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `list_address` | string | Yes | Comma-separated addresses |
+---
 
 ### GET /defi/v3/pair/overview/single
-Single trading pair overview.
+Full trading pair overview: base/quote tokens, price, volume, liquidity, fee rate, DEX.
 
-**CU Cost**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-pair-overview-single
+**CU**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-pair-overview-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Pair address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/pair/overview/single?address=<PAIR>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ base, quote, price, volume24h, liquidity, feeRate, dex }`
+**Response**: `data.{ base, quote, price, volume24h, liquidity, feeRate, dex }`
+
+---
 
 ### GET /defi/v3/pair/overview/multiple
 Batch pair overviews.
 
-**CU Cost**: 20 per pair | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-pair-overview-multiple
+**CU**: 20/pair | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-pair-overview-multiple
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `list_address` | string | Yes | Comma-separated pair addresses |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/pair/overview/multiple?list_address=<PAIR1>,<PAIR2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### GET /defi/v3/price/stats/single
-Price statistical analysis.
+Price change statistics across multiple time windows.
 
-**CU Cost**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-price-stats-single
+**CU**: 20 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-price-stats-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/price/stats/single?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### POST /defi/v3/price/stats/multiple
 Batch price statistics.
 
-**CU Cost**: 20 per token | **Docs**: https://docs.birdeye.so/reference/post-defi-v3-price-stats-multiple
+**CU**: 20/token | **Docs**: https://docs.birdeye.so/reference/post-defi-v3-price-stats-multiple
 
-**Body**: `{ "list_address": "addr1,addr2" }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/defi/v3/price/stats/multiple" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"list_address": "<ADDR1>,<ADDR2>"}'
+```
 
 ---
 
-## Alltime & History Endpoints
+## Alltime & History
 
 ### GET /defi/v3/all-time/trades/single
-Complete historical trading data for a token.
+Aggregate trading summary over a time window.
 
-**Docs**: https://docs.birdeye.so/reference/get-defi-v3-all-time-trades-single
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-all-time-trades-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/all-time/trades/single?address=<TOKEN>&time_frame=24h" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ allTimeBuyVolume, allTimeSellVolume, allTimeTradeCount, allTimeUniqueBuyers, firstTradeUnixTime, lastTradeUnixTime }`
+**Response**: `data.{ allTimeBuyVolume, allTimeSellVolume, allTimeTradeCount, allTimeUniqueBuyers, firstTradeUnixTime, lastTradeUnixTime }`
+
+---
 
 ### POST /defi/v3/all-time/trades/multiple
-Batch historical trade data.
+Batch alltime trade data.
 
 **Docs**: https://docs.birdeye.so/reference/post-defi-v3-all-time-trades-multiple
 
-**Body**: `{ "list_address": "addr1,addr2" }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/defi/v3/all-time/trades/multiple" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"list_address": "<ADDR1>,<ADDR2>"}'
+```

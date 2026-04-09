@@ -25,7 +25,10 @@ Read the relevant reference file before implementing:
 | Price volume combined data | `references/operation-map.md` → Price Volume endpoints |
 | Pair overview, pair stats | `references/operation-map.md` → Pair endpoints |
 | Trade data, liquidity analysis | `references/operation-map.md` → Trade/Liquidity endpoints |
+| Which endpoint to use for your intent | `references/endpoint-playbook.md` |
+| Copy-paste curl/fetch examples | `references/request-templates.md` |
 | Common issues and edge cases | `references/caveats.md` |
+| Exact endpoint params, chain support, curl | `birdeye-indexer` skill → `references/canonical-endpoint-dictionary.md` |
 
 ## Rules
 

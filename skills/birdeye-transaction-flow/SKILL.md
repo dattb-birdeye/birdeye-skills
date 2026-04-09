@@ -25,7 +25,10 @@ You are an expert at querying transaction and transfer data using Birdeye APIs. 
 | Token/wallet transfers | `references/operation-map.md` → Transfers |
 | Current block number | `references/operation-map.md` → Blockchain |
 | Supported networks | `references/operation-map.md` → Networks |
+| Which endpoint to use for your intent | `references/endpoint-playbook.md` |
+| Copy-paste curl/fetch examples | `references/request-templates.md` |
 | Common issues | `references/caveats.md` |
+| Exact endpoint params, chain support, curl | `birdeye-indexer` skill → `references/canonical-endpoint-dictionary.md` |
 
 ## Rules
 

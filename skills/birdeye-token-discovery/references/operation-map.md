@@ -1,170 +1,157 @@
 # Token Discovery — Operation Map
 
+> **Params source of truth**: [`birdeye-indexer/references/canonical-endpoint-dictionary.md`](../../../birdeye-indexer/references/canonical-endpoint-dictionary.md)
+> Each entry below lists: description · CU · Docs URL · minimal curl · response fields.
+
+---
+
 ## Search
 
 ### GET /defi/v3/search
-Search tokens and pairs by keyword (name, symbol, or address).
+Search tokens and pairs by keyword (name, symbol, or address). `sort_by` and `sort_type` are required.
 
-**CU Cost**: Low | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-search
+**CU**: low | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-search
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `keyword` | string | Yes | Search term (token name, symbol, or address) |
-| `target` | string | No | Filter target: `token`, `market` (default: both) |
-| `sort_by` | string | No | Sort results: `volume_24h_usd`, `liquidity`, `market_cap` |
-| `sort_type` | string | No | Sort direction: `asc`, `desc` |
-| `offset` | number | No | Pagination offset |
-| `limit` | number | No | Results per page (max 20) |
-| `chain` | string | No | Alternative to x-chain header. `all` to search all chains |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/search?sort_by=liquidity&sort_type=desc&keyword=bonk&target=token" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.items[]` → `{ type: "token"|"market", result: [{ name, symbol, address, decimals, logoURI, liquidity, volume24hUSD, marketCap, network }] }`
+**Response**: `data.items[] → { type: "token"|"market", result: [{ name, symbol, address, decimals, logoURI, liquidity, volume24hUSD, marketCap, network }] }`
 
 ---
 
 ## Token Lists
 
 ### GET /defi/v3/token/list
-Browse tokens with filtering and sorting.
+Browse tokens ranked by volume, liquidity, market cap, or holder count with optional filters.
 
-**CU Cost**: 100 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-list
+**CU**: 100 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-list
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `sort_by` | string | No | Sort field: `volume24h`, `liquidity`, `marketCap`, `price`, `priceChange24h`, `holder`, `trade24h`, `uniqueWallet24h` |
-| `sort_type` | string | No | `asc` or `desc` (default: `desc`) |
-| `offset` | number | No | Pagination offset (default: 0) |
-| `limit` | number | No | Results per page (max 50, default: 20) |
-| `min_liquidity` | number | No | Minimum USD liquidity filter |
-| `min_volume_24h` | number | No | Minimum 24h volume filter |
-| `min_market_cap` | number | No | Minimum market cap filter |
-| `min_holder` | number | No | Minimum holder count |
-| `min_trade_24h` | number | No | Minimum trade count in 24h |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/list?sort_by=volume24h&sort_type=desc&min_liquidity=50000&limit=20" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.tokens[]` → `{ address, name, symbol, price, priceChange24h, volume24h, liquidity, marketCap, holder, trade24h, uniqueWallet24h }`, `data.total`
+**Response**: `data.tokens[] → { address, name, symbol, price, priceChange24h, volume24h, liquidity, marketCap, holder, trade24h, uniqueWallet24h }`, `data.total`
+
+---
 
 ### GET /defi/v3/token/list/scroll
-Scroll-based pagination for large token lists.
+Scroll-based pagination for iterating the full token universe. Use only when you need all tokens — expensive.
 
-**CU Cost**: 500 (expensive) | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-list-scroll
+**CU**: 500 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-list-scroll
 
-Same params as v3/token/list, plus:
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `scroll_id` | string | No | Scroll cursor from previous response |
+```bash
+# First page — no scroll_id
+curl -sS "https://public-api.birdeye.so/defi/v3/token/list/scroll?sort_by=volume24h&sort_type=desc" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
 
-Use only when you need to iterate through the full token list. For most use cases, `v3/token/list` with offset/limit is sufficient.
+# Subsequent pages — pass scroll_id from previous response
+curl -sS "https://public-api.birdeye.so/defi/v3/token/list/scroll?sort_by=volume24h&sort_type=desc&scroll_id=<ID>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-### GET /defi/tokenlist (Legacy)
-Legacy token list endpoint.
-
-**CU Cost**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-tokenlist
-
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `sort_by` | string | No | `v24hUSD`, `mc`, `holder` |
-| `sort_type` | string | No | `asc`, `desc` |
-| `offset` | number | No | Pagination offset |
-| `limit` | number | No | Max 50 |
+**Response**: same as v3/token/list plus `data.scroll_id` for next page
 
 ---
 
 ## Market List
 
 ### GET /defi/v2/markets
-All trading pairs/markets for a token.
+All trading pairs for a token — useful for finding pool addresses or liquidity distribution across DEXs. `time_frame`, `sort_by`, `sort_type` are required.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-markets
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-markets
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `sort_by` | string | No | `volume24h`, `liquidity` |
-| `sort_type` | string | No | `asc`, `desc` |
-| `offset` | number | No | Pagination offset |
-| `limit` | number | No | Results per page |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v2/markets?address=<TOKEN>&time_frame=24h&sort_by=liquidity&sort_type=desc" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: List of trading pairs with DEX info, base/quote tokens, volume, liquidity.
+**Response**: list of pairs with DEX info, base/quote tokens, volume, liquidity
 
 ---
 
 ## New Listing & Trending
 
 ### GET /defi/v2/tokens/new_listing
-Recently listed tokens.
+Recently listed tokens. Includes creation time, initial liquidity, current price, volume.
 
-**CU Cost**: 80 | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-tokens-new_listing
+**CU**: 80 | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-tokens-new_listing
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `time_to` | number | No | End time filter (Unix timestamp) |
-| `limit` | number | No | Results per page |
-| `meme_platform_enabled` | boolean | No | Include meme platform tokens |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v2/tokens/new_listing?limit=20&meme_platform_enabled=true" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: List of recently listed tokens with creation time, initial liquidity, current price, volume.
+**Response**: list of recently listed tokens with `{ address, name, symbol, liquidity, price, volume24h, createdAt }`
+
+---
 
 ### GET /defi/token_trending
-Currently trending tokens.
+Currently trending tokens. `sort_by` and `sort_type` are required.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-token_trending
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-defi-token_trending
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `sort_by` | string | Yes | `rank`, `volumeUSD`, `liquidity` |
-| `sort_type` | string | Yes | `asc`, `desc` |
-| `interval` | string | No | `1h`, `4h`, `24h` |
-| `offset` | number | No | Offset |
-| `limit` | number | No | Max results |
-| `ui_amount_mode` | string | No | `raw`, `scaled` |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&interval=24h&limit=20" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
 ---
 
 ## Creation Info
 
 ### GET /defi/token_creation_info
-Token creation/deployment details.
+Token deployment details: deployer wallet, creation tx, creation timestamp. Solana only.
 
-**CU Cost**: 80 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_creation_info
+**CU**: 80 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_creation_info
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/token_creation_info?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ address, decimals, symbol, name, txHash, slot, blockUnixTime, owner, deployer }`
+**Response**: `data.{ address, decimals, symbol, name, txHash, slot, blockUnixTime, owner, deployer }`
 
 ---
 
 ## Meme Tokens
 
 ### GET /defi/v3/token/meme/list
-Browse meme tokens with filtering.
+Browse meme tokens (pump.fun, bonding curve). Solana and BSC only.
 
-**CU Cost**: Variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meme-list
+**CU**: variable | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meme-list
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `sort_by` | string | No | Sort field |
-| `sort_type` | string | No | `asc`, `desc` |
-| `offset` | number | No | Offset |
-| `limit` | number | No | Max results |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/meme/list?sort_type=desc&limit=20" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### GET /defi/v3/token/meme/detail/single
-Detailed meme token metrics.
+Detailed meme token metrics: graduation status, bonding curve progress, social metrics.
 
-**CU Cost**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meme-detail-single
+**CU**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-v3-token-meme-detail-single
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-
-**Key fields**: Meme-specific metrics including social metrics, holder distribution, pump.fun/bonding curve status.
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v3/token/meme/detail/single?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
 ---
 
 ## Utilities
 
 ### GET /utils/v1/credits
-Check API credit usage.
+Check remaining API credit balance.
 
 **Docs**: https://docs.birdeye.so/reference/get-utils-v1-credits
 
-**Key fields**: `data.{ totalCredits, usedCredits, remainingCredits, resetDate }`
+```bash
+curl -sS "https://public-api.birdeye.so/utils/v1/credits" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "accept: application/json"
+```
+
+**Response**: `data.{ totalCredits, usedCredits, remainingCredits, resetDate }`

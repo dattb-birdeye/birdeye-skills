@@ -1,165 +1,200 @@
 # Wallet Intelligence — Operation Map
 
+> **Params source of truth**: [`birdeye-indexer/references/canonical-endpoint-dictionary.md`](../../../birdeye-indexer/references/canonical-endpoint-dictionary.md)
+> Each entry below lists: description · CU · Docs URL · minimal curl · response fields.
+> ⚠️ All wallet endpoints: **30 RPM hard limit** on all tiers. Sequence calls — do not burst.
+
+---
+
 ## Net Worth
 
 ### GET /wallet/v2/current-net-worth
-Real-time portfolio valuation.
+Real-time total portfolio value. `wallet` and `sort_type` are required.
 
-**CU Cost**: 60 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-current-net-worth
+**CU**: 60 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-current-net-worth
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
+```bash
+curl -sS "https://public-api.birdeye.so/wallet/v2/current-net-worth?wallet=<WALLET>&sort_type=desc" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ wallet, totalUsd, solBalance, solUsdValue, tokenCount, nftCount, updateTime }`
+**Response**: `data.{ wallet, totalUsd, solBalance, solUsdValue, tokenCount, nftCount, updateTime }`
+
+---
 
 ### GET /wallet/v2/net-worth
-Historical net worth chart data.
+Historical net worth chart data. `wallet` and `sort_type` required. Use `count`/`direction`/`time`/`type` to scope the range — not `time_from`/`time_to`.
 
-**CU Cost**: 60 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-net-worth
+**CU**: 60 | **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-net-worth
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
-| `time_from` | number | No | Start Unix timestamp |
-| `time_to` | number | No | End Unix timestamp |
+```bash
+curl -sS "https://public-api.birdeye.so/wallet/v2/net-worth?wallet=<WALLET>&sort_type=desc&count=30&direction=back&type=1d" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.items[]` → `{ unixTime, totalUsd, solValue, tokenValue, nftValue }`
+**Response**: `data.items[] → { unixTime, totalUsd, solValue, tokenValue, nftValue }`
+
+---
 
 ### GET /wallet/v2/net-worth-details
-Granular holding breakdown.
+Granular token-by-token holding breakdown. `wallet` and `sort_type` required.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-net-worth-details
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
+```bash
+curl -sS "https://public-api.birdeye.so/wallet/v2/net-worth-details?wallet=<WALLET>&sort_type=desc&limit=50" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: Detailed list of each token holding with amount, price, USD value, and percentage of portfolio.
+**Response**: list of token holdings `{ address, symbol, amount, uiAmount, price, valueUsd, percentage }`
+
+---
 
 ### POST /wallet/v2/net-worth-summary/multiple
 Batch portfolio values for multiple wallets.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-net-worth-summary-multiple
 
-**Body**: `{ "wallets": ["wallet1", "wallet2", "wallet3"] }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/wallet/v2/net-worth-summary/multiple" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"wallets": ["<WALLET1>", "<WALLET2>"]}'
+```
 
 ---
 
 ## PnL (Profit & Loss)
 
 ### GET /wallet/v2/pnl/summary
-Overall PnL summary for a wallet.
+Overall win rate, total PnL, realized vs unrealized. Best starting point for PnL analysis.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl-summary
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
+```bash
+curl -sS "https://public-api.birdeye.so/wallet/v2/pnl/summary?wallet=<WALLET>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.{ wallet, totalPnl, totalPnlPercent, totalInvested, totalRealized, totalUnrealized, winRate, totalTrades }`
+**Response**: `data.{ wallet, totalPnl, totalPnlPercent, totalInvested, totalRealized, totalUnrealized, winRate, totalTrades }`
 
-### POST /wallet/v2/pnl/details
-Detailed gain/loss per trade.
-
-**Docs**: https://docs.birdeye.so/reference/post-wallet-v2-pnl-details
-
-**Body**: `{ "wallet": "wallet_address" }`
-
-**Key fields**: List of individual trades with entry/exit prices, PnL per trade, timestamps.
+---
 
 ### GET /wallet/v2/pnl
-PnL breakdown per token.
+PnL breakdown per token. Both `wallet` and `token_addresses` are required.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
-| `token_addresses` | string | Yes | Comma-separated token addresses to filter by |
+```bash
+curl -sS "https://public-api.birdeye.so/wallet/v2/pnl?wallet=<WALLET>&token_addresses=<TOKEN1>,<TOKEN2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: Per-token `{ tokenAddress, symbol, buyVolume, sellVolume, avgBuyPrice, avgSellPrice, realizedPnl, unrealizedPnl, totalPnl, pnlPercent }`
+**Response**: per-token `{ tokenAddress, symbol, buyVolume, sellVolume, avgBuyPrice, avgSellPrice, realizedPnl, unrealizedPnl, totalPnl, pnlPercent }`
+
+---
+
+### POST /wallet/v2/pnl/details
+Per-trade entry/exit detail — most granular PnL view.
+
+**Docs**: https://docs.birdeye.so/reference/post-wallet-v2-pnl-details
+
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/wallet/v2/pnl/details" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"wallet": "<WALLET>"}'
+```
+
+**Response**: list of individual trades with entry/exit prices, PnL per trade, timestamps
+
+---
 
 ### GET /wallet/v2/pnl/multiple
-Compare PnL across multiple wallets.
+Compare PnL for a token across multiple wallets. Both `token_address` and `wallets` are required.
 
 **Docs**: https://docs.birdeye.so/reference/get-wallet-v2-pnl-multiple
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallets` | string | Yes | Comma-separated wallet addresses |
+```bash
+curl -sS "https://public-api.birdeye.so/wallet/v2/pnl/multiple?token_address=<TOKEN>&wallets=<WALLET1>,<WALLET2>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
 ---
 
 ## Top Traders
 
 ### GET /defi/v2/tokens/top_traders
-Leading traders for a specific token.
+Best traders for a specific token. `address`, `time_frame`, `sort_by`, `sort_type` all required.
 
-**CU Cost**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-tokens-top_traders
+**CU**: 30 | **Docs**: https://docs.birdeye.so/reference/get-defi-v2-tokens-top_traders
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-| `time_frame` | string | Yes | `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `24h` |
-| `sort_by` | string | Yes | `volume`, `trade` |
-| `sort_type` | string | Yes | `asc`, `desc` |
-| `offset` | number | No | Offset |
-| `limit` | number | No | Max results |
-| `ui_amount_mode` | string | No | `raw`, `scaled` |
+```bash
+curl -sS "https://public-api.birdeye.so/defi/v2/tokens/top_traders?address=<TOKEN>&time_frame=24h&sort_by=volume&sort_type=desc&limit=20" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
-**Key fields**: `data.items[]` → `{ wallet, pnl, volume, tradeCount, buyVolume, sellVolume, tags }`
+**Response**: `data.items[] → { wallet, pnl, volume, tradeCount, buyVolume, sellVolume, tags }`
+
+---
 
 ### GET /trader/gainers-losers
-Top performing and worst-performing traders.
+Top performing traders today, yesterday, or this week. `type`, `sort_by`, `sort_type` all required.
 
 **Docs**: https://docs.birdeye.so/reference/get-trader-gainers-losers
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `type` | string | Yes | Time period: `yesterday`, `today`, `1W` |
-| `sort_by` | string | Yes | `PnL` |
-| `sort_type` | string | Yes | `asc`, `desc` |
-| `offset` | number | No | Offset |
-| `limit` | number | No | Max results |
+```bash
+curl -sS "https://public-api.birdeye.so/trader/gainers-losers?type=today&sort_by=PnL&sort_type=desc&limit=10" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
 
 ---
 
 ## Wallet History
 
 ### POST /wallet/v2/tx/first-funded
-First funding transaction for a wallet.
+First funding transaction — use to determine wallet age and funding origin.
 
 **Docs**: https://docs.birdeye.so/reference/post-wallet-v2-tx-first-funded
 
-**Body**: `{ "wallet": "wallet_address" }`
+```bash
+curl -sS -X POST "https://public-api.birdeye.so/wallet/v2/tx/first-funded" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "Content-Type: application/json" \
+  -d '{"wallet": "<WALLET>"}'
+```
 
-**Key fields**: Details of the first transaction that funded the wallet (useful for wallet provenance tracking).
+**Response**: details of the first funding transaction (source wallet, amount, timestamp)
+
+---
 
 ### GET /v1/wallet/tx_list (Beta)
-Complete transaction history.
+Complete transaction history for a wallet. Expensive — scope with `before_time`/`after_time`.
 
-**CU Cost**: 150 | **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-tx_list
+**CU**: 150 | **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-tx_list
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
-| `before_time` | number | No | End Unix timestamp |
-| `after_time` | number | No | Start Unix timestamp |
-| `limit` | number | No | Max results |
+```bash
+curl -sS "https://public-api.birdeye.so/v1/wallet/tx_list?wallet=<WALLET>&after_time=<TS>&limit=50" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### GET /v1/wallet/token_list (Beta)
-Current holdings inventory.
+Current token holdings with balances.
 
-**CU Cost**: 100 | **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-token_list
+**CU**: 100 | **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-token_list
 
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `wallet` | string | Yes | Wallet address |
+```bash
+curl -sS "https://public-api.birdeye.so/v1/wallet/token_list?wallet=<WALLET>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+---
 
 ### GET /v1/wallet/list_supported_chain
-Supported chains for wallet APIs.
+Supported chains for wallet APIs. Run once and cache.
 
 **Docs**: https://docs.birdeye.so/reference/get-v1-wallet-list_supported_chain
 
-**Key fields**: `data` → list of chain identifiers.
+```bash
+curl -sS "https://public-api.birdeye.so/v1/wallet/list_supported_chain" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "accept: application/json"
+```

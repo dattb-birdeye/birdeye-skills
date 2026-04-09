@@ -107,17 +107,16 @@ interface VolumeSpikeAlert {
 Trigger on large trades above threshold.
 
 **Stream**: `SUBSCRIBE_LARGE_TRADE_TXS`
-**Logic**: Direct — stream only sends trades above `minVolumeUSD`.
+**Logic**: Direct — stream only sends trades above `min_volume`. No `data` wrapper. No address filter (chain-wide).
 
 ```typescript
 function setupWhaleAlert(ws: BirdeyeWebSocket, config: {
-  tokenAddress: string;
-  minVolumeUSD: number;
+  minVolumeUSD: number;    // maps to min_volume param
   onAlert: (trade: any) => void;
 }) {
+  // NO data wrapper — params are top-level
   ws.subscribe('SUBSCRIBE_LARGE_TRADE_TXS', {
-    address: config.tokenAddress,
-    minVolumeUSD: config.minVolumeUSD,
+    min_volume: config.minVolumeUSD,
   });
 
   ws.onMessage((msg) => {
@@ -149,15 +148,16 @@ async function setupNewListingAlert(ws: BirdeyeWebSocket, config: {
   requireNoMintAuthority: boolean;
   onAlert: (listing: any) => void;
 }) {
-  ws.subscribe('SUBSCRIBE_TOKEN_NEW_LISTING', {});
+  // NO data wrapper — optionally pass top-level filters like min_liquidity
+  ws.subscribe('SUBSCRIBE_TOKEN_NEW_LISTING', { min_liquidity: config.minLiquidity });
 
   ws.onMessage(async (msg) => {
     if (msg.type !== 'TOKEN_NEW_LISTING_DATA') return;
 
-    const token = msg.data;
+    const token = msg.data;  // event fields: address, name, symbol, liquidity, liquidityAddedAt
 
-    // Quick filters
-    if (token.initialLiquidity < config.minLiquidity) return;
+    // Quick filters — event field is liquidity (not initialLiquidity)
+    if (token.liquidity < config.minLiquidity) return;
 
     // Security check via REST
     try {
@@ -175,14 +175,13 @@ async function setupNewListingAlert(ws: BirdeyeWebSocket, config: {
           address: token.address,
           name: token.name,
           symbol: token.symbol,
-          dex: token.dex,
-          initialLiquidity: token.initialLiquidity,
-          deployer: token.deployer,
+          liquidity: token.liquidity,          // event field name
+          liquidityAddedAt: token.liquidityAddedAt,
         },
         security: {
           mintAuthority: secData.data?.mintAuthority || null,
           freezeAuthority: secData.data?.freezeAuthority || null,
-          locked: secData.data?.lockInfo?.locked || false,
+          lockInfo: secData.data?.lockInfo || null,
         },
         timestamp: token.blockUnixTime,
       });

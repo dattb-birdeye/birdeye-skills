@@ -1,78 +1,85 @@
 # Security Analysis — Operation Map
 
-## Token Security
-
-### GET /defi/token_security
-Security audit and risk assessment for a token.
-
-**CU Cost**: 50 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_security
-
-| Param | Type | Required | Description |
-|---|---|---|---|
-| `address` | string | Yes | Token address |
-
-**Key fields**: `data.{ ownerAddress, creatorAddress, mintAuthority, freezeAuthority, isToken2022, mutableMetadata, top10HolderPercent, top10UserPercent, totalSupply, lockInfo, transferFee, isVerified, knownAccounts, preMarketHolder }`
-
-**Key Security Fields**:
-
-| Field | What It Means | Risk Signal |
-|---|---|---|
-| `mintAuthority` | Can mint new tokens | Non-null = inflation risk |
-| `freezeAuthority` | Can freeze token accounts | Non-null = censorship risk |
-| `metaplexUpdateAuthority` | Can change token metadata | Non-null = bait-and-switch risk |
-| `mutableMetadata` | Metadata can be modified | true = metadata can change |
-| `top10HolderPercent` | Supply held by top 10 wallets | >80% = concentration risk |
-| `top10UserPercent` | Supply held by top 10 non-program wallets | >50% = whale risk |
-| `lockInfo.locked` | Liquidity is locked | false = rug pull risk |
-| `lockInfo.lockPercent` | % of liquidity locked | <50% = partial lock, still risky |
-| `lockInfo.lockExpiry` | Lock expiry timestamp | Soon = unlocking risk |
-| `transferFee.enabled` | Token has transfer tax | true = hidden fee, check % |
-| `isToken2022` | Uses Token-2022 program | May have extension risks |
-| `preMarketHolder` | Wallets that held before market creation | Insider risk signal |
+> **Params source of truth**: [`birdeye-indexer/references/canonical-endpoint-dictionary.md`](../../../birdeye-indexer/references/canonical-endpoint-dictionary.md)
+> Each entry below lists: description · CU · Docs URL · minimal curl · response fields.
 
 ---
 
-## Composite Security Analysis Pattern
+## Token Security
 
-For a thorough security check, combine the security endpoint with other skills:
+### GET /defi/token_security
+Security audit and risk flags for a token. All chains except Sui.
+
+**CU**: 50 | **Docs**: https://docs.birdeye.so/reference/get-defi-token_security
+
+```bash
+curl -sS "https://public-api.birdeye.so/defi/token_security?address=<TOKEN>" \
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "x-chain: solana" -H "accept: application/json"
+```
+
+**Response**: `data` — schema differs by chain (Solana vs EVM). Key fields:
+
+**Solana response fields**:
+
+| Field | Risk Signal |
+|---|---|
+| `mintAuthority` | Non-null = can mint new tokens (inflation risk) |
+| `freezeAuthority` | Non-null = can freeze token accounts (censorship risk) |
+| `metaplexUpdateAuthority` | Non-null = can change token metadata (bait-and-switch risk) |
+| `mutableMetadata` | `true` = metadata can be modified |
+| `top10HolderPercent` | > 0.8 (80%) = concentration risk |
+| `top10UserPercent` | > 0.5 (50%) = whale risk |
+| `lockInfo` | `null` = no liquidity lock (rug pull risk); check `lockPercent`, `lockExpiry` |
+| `transferFeeEnable` | `true` = token has a transfer tax |
+| `isToken2022` | Uses Token-2022 program — may have extension risks |
+| `preMarketHolder` | Non-empty = wallets held before market was created (insider risk) |
+| `jupStrictList` | `false` = not on Jupiter strict list |
+
+**EVM response fields**:
+
+| Field | Risk Signal |
+|---|---|
+| `isHoneypot` | `"1"` = cannot sell (honeypot) |
+| `isMintable` | `"1"` = mintable supply |
+| `isOpenSource` | `"0"` = unverified contract |
+| `isProxy` | `"1"` = upgradeable proxy (can change logic) |
+| `hiddenOwner` | `"1"` = renounced but hidden owner exists |
+| `buyTax` / `sellTax` | Non-zero = buy/sell fee percentage |
+| `canTakeBackOwnership` | `"1"` = ownership can be reclaimed |
+| `holderCount` | Cross-reference with holder analysis |
+
+---
+
+## Composite Analysis Pattern
+
+For thorough security check, combine with other skills:
 
 ```typescript
-async function fullSecurityAnalysis(
-  apiKey: string,
-  tokenAddress: string,
-  chain: string = 'solana'
-) {
-  const headers = {
-    'X-API-KEY': apiKey,
-    'x-chain': chain,
-    'accept': 'application/json',
-  };
+async function fullSecurityAnalysis(apiKey: string, tokenAddress: string, chain = 'solana') {
+  const headers = { 'X-API-KEY': apiKey, 'x-chain': chain, 'accept': 'application/json' };
 
-  // 1. Security data (50 CU)
-  const securityRes = await fetch(
-    `https://public-api.birdeye.so/defi/token_security?address=${tokenAddress}`,
-    { headers }
+  // 1. Security flags (50 CU)
+  const secRes = await fetch(
+    `https://public-api.birdeye.so/defi/token_security?address=${tokenAddress}`, { headers }
   );
-  const security = await securityRes.json();
+  const security = await secRes.json();
 
   // 2. Token overview for liquidity/volume context (30 CU)
   const overviewRes = await fetch(
-    `https://public-api.birdeye.so/defi/token_overview?address=${tokenAddress}`,
-    { headers }
+    `https://public-api.birdeye.so/defi/token_overview?address=${tokenAddress}`, { headers }
   );
   const overview = await overviewRes.json();
 
   // 3. Top holders for concentration check (variable CU)
   const holdersRes = await fetch(
-    `https://public-api.birdeye.so/defi/v3/token/holder?address=${tokenAddress}&limit=20`,
-    { headers }
+    `https://public-api.birdeye.so/defi/v3/token/holder?address=${tokenAddress}&limit=20`, { headers }
   );
   const holders = await holdersRes.json();
 
   return {
     security: security.data,
     overview: overview.data,
-    topHolders: holders.data?.items || [],
+    topHolders: holders.data?.items ?? [],
   };
 }
 ```

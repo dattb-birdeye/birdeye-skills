@@ -90,19 +90,16 @@ ws.on('open', () => {
     },
   }));
 
-  // Channel 3: New listings
+  // Channel 3: New listings — NO data wrapper, params are top-level
   ws.send(JSON.stringify({
     type: 'SUBSCRIBE_TOKEN_NEW_LISTING',
-    data: {},
+    min_liquidity: 5000,  // optional filter
   }));
 
-  // Channel 4: Large trades
+  // Channel 4: Large trades — NO data wrapper, param is min_volume (not minVolumeUSD), no address param
   ws.send(JSON.stringify({
     type: 'SUBSCRIBE_LARGE_TRADE_TXS',
-    data: {
-      address: 'So11111111111111111111111111111111111111112',
-      minVolumeUSD: 50000,
-    },
+    min_volume: 50000,
   }));
 });
 ```
@@ -113,17 +110,13 @@ Monitor large trades and wallet activity:
 
 ```typescript
 function setupWhaleAlert(ws: WebSocket, config: {
-  tokenAddress: string;
-  minVolumeUSD: number;
+  minVolumeUSD: number;    // Note: SUBSCRIBE_LARGE_TRADE_TXS has no address filter — it's chain-wide
   whaleWallets: string[];
 }) {
-  // Track large trades on the token
+  // Track large trades chain-wide — NO data wrapper, param is min_volume
   ws.send(JSON.stringify({
     type: 'SUBSCRIBE_LARGE_TRADE_TXS',
-    data: {
-      address: config.tokenAddress,
-      minVolumeUSD: config.minVolumeUSD,
-    },
+    min_volume: config.minVolumeUSD,
   }));
 
   // Track specific whale wallets
@@ -148,7 +141,7 @@ ws.on('message', async (rawData: Buffer) => {
     const token = msg.data;
 
     console.log(`New token: ${token.symbol} (${token.address})`);
-    console.log(`DEX: ${token.dex}, Liquidity: $${token.initialLiquidity}`);
+    console.log(`DEX: ${token.source}, Liquidity: $${token.liquidity}`);  // field: liquidity (not initialLiquidity)
 
     // Quick security check via REST API
     const securityRes = await fetch(
@@ -162,8 +155,8 @@ ws.on('message', async (rawData: Buffer) => {
       return;
     }
 
-    if (token.initialLiquidity < 5000) {
-      console.log('WARNING: Low initial liquidity — skip');
+    if (token.liquidity < 5000) {
+      console.log('WARNING: Low liquidity — skip');
       return;
     }
 

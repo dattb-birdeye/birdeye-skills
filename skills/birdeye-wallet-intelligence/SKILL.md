@@ -26,7 +26,10 @@ You are an expert at analyzing wallets using Birdeye APIs. This skill covers por
 | First funding transaction | `references/operation-map.md` → First Funded |
 | Wallet tx history | `references/operation-map.md` → Tx History |
 | Wallet token list | `references/operation-map.md` → Portfolio |
+| Which endpoint to use for your intent | `references/endpoint-playbook.md` |
+| Copy-paste curl/fetch examples | `references/request-templates.md` |
 | Common issues | `references/caveats.md` |
+| Exact endpoint params, chain support, curl | `birdeye-indexer` skill → `references/canonical-endpoint-dictionary.md` |
 
 ## Rules
 

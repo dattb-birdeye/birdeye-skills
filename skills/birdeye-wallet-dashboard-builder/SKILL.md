@@ -49,14 +49,14 @@ birdeye-transaction-flow → GET /wallet/v2/balance-change (balance changes)
 For each significant token in the portfolio:
 ```
 birdeye-market-data → GET /defi/price (current prices)
-birdeye-holder-analysis → GET /defi/v3/token/holder (holder rank for this wallet)
+birdeye-holder-analysis → GET /defi/v3/token/holder (list all holders; scan to check wallet's position)
 birdeye-security-analysis → GET /defi/token_security (risk check)
 ```
 
-### Step 4: Smart Money Classification
+### Step 4: PnL & Smart Money Context
 ```
-birdeye-smart-money → Check if wallet appears in smart money lists
 birdeye-wallet-intelligence → GET /wallet/v2/pnl (per-token performance)
+birdeye-smart-money → GET /smart-money/v1/token/list (tokens smart money trades; cross-reference wallet's holdings — no direct "is this wallet smart money?" endpoint)
 ```
 
 ### Step 5: Set Up Live Monitoring

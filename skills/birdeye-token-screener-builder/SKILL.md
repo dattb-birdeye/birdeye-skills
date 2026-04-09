@@ -37,30 +37,43 @@ Map user's criteria to API parameters:
 
 ```typescript
 interface ScreenerCriteria {
-  // Market filters
-  minLiquidity?: number;        // Min USD liquidity
-  minVolume24h?: number;        // Min 24h volume
-  minMarketCap?: number;        // Min market cap
-  maxMarketCap?: number;        // Max market cap (for small caps)
-  minHolders?: number;          // Min holder count
+  // Market filters (map directly to /defi/v3/token/list params)
+  minLiquidity?: number;        // min_liquidity
+  minVolume24h?: number;        // min_volume_24h
+  minMarketCap?: number;        // min_market_cap
+  maxMarketCap?: number;        // post-filter (no API param)
+  minHolders?: number;          // min_holder
 
-  // Price filters
-  minPriceChange24h?: number;   // Min 24h price change %
-  maxPriceChange24h?: number;   // Max 24h price change %
+  // Price filters (post-filter, no API param)
+  minPriceChange24h?: number;
+  maxPriceChange24h?: number;
 
-  // Safety filters
-  maxRiskScore?: number;        // Max risk score (0-100)
-  requireLockedLiquidity?: boolean;
-  requireNoMintAuthority?: boolean;
+  // Safety filters (from /defi/token_security response booleans)
+  requireNoMintAuthority?: boolean;   // checks: !data.mintAuthority (Solana) | data.isMintable==="0" (EVM)
+  requireNoFreezeAuthority?: boolean; // checks: !data.freezeAuthority
+  requireLockedLiquidity?: boolean;   // checks: data.lockInfo !== null
 
-  // Smart money filters
-  requireSmartMoneyAccumulation?: boolean;
-  minSmartMoneyWallets?: number;
+  // Smart money filters (post-filter against /smart-money/v1/token/list)
+  requireSmartMoneyAccumulation?: boolean; // token must appear in smart money list with netFlow > 0
+  minSmartMoneyWallets?: number;           // token.smartTradersNo >= minSmartMoneyWallets
 
-  // Sorting
-  sortBy: string;
+  // Sorting (sort_by/sort_type for /defi/v3/token/list)
+  sortBy: 'volume24h' | 'liquidity' | 'marketCap' | 'price' | 'priceChange24h' | 'holder' | 'trade24h';
   sortDirection: 'asc' | 'desc';
   limit: number;
+}
+
+interface ScreenerResult {
+  address: string;
+  name: string;
+  symbol: string;
+  price: number;
+  priceChange24h: number;
+  volume24h: number;
+  liquidity: number;
+  marketCap: number;
+  holders: number;
+  smartMoneySignal: { netFlow: number; smartTradersNo: number } | null;
 }
 ```
 
@@ -146,9 +159,11 @@ async function runScreener(
     );
     const secData = await secRes.json();
 
-    // Apply security filters
-    if (criteria.requireNoMintAuthority && secData.data?.mintAuthority) continue;
-    if (criteria.requireLockedLiquidity && !secData.data?.lockInfo?.locked) continue;
+    const sec = secData.data;
+    // Solana: mintAuthority field; EVM: isMintable === "0"
+    if (criteria.requireNoMintAuthority && (sec?.mintAuthority || sec?.isMintable === '1')) continue;
+    if (criteria.requireNoFreezeAuthority && sec?.freezeAuthority) continue;
+    if (criteria.requireLockedLiquidity && !sec?.lockInfo) continue;
 
     results.push({
       address: token.address,
@@ -160,33 +175,37 @@ async function runScreener(
       liquidity: token.liquidity,
       marketCap: token.marketCap,
       holders: token.holder,
-      securityScore: calculateRiskScore(secData.data),
       smartMoneySignal: null, // Filled in step 4
     });
   }
 
   // Step 4: Smart money overlay
   const smartRes = await fetch(
-    `https://public-api.birdeye.so/smart-money/v1/token/list?interval=1d&limit=100`,
+    `https://public-api.birdeye.so/smart-money/v1/token/list?interval=1d&sort_by=net_flow&sort_type=desc&limit=100`,
     { headers }
   );
   const smartData = await smartRes.json();
-  const smartTokens = new Map(
-    smartData.data.items.map((t: any) => [t.address, t])
+  const smartTokens = new Map<string, any>(
+    (smartData.data?.items ?? []).map((t: any) => [t.address, t])
   );
 
+  const filtered: typeof results = [];
   for (const result of results) {
     const smartInfo = smartTokens.get(result.address);
+
+    if (criteria.requireSmartMoneyAccumulation && (!smartInfo || smartInfo.netFlow <= 0)) continue;
+    if (criteria.minSmartMoneyWallets && (!smartInfo || smartInfo.smartTradersNo < criteria.minSmartMoneyWallets)) continue;
+
     if (smartInfo) {
       result.smartMoneySignal = {
-        netVolume: smartInfo.netFlow,
-        walletCount: smartInfo.smartTradersNo,
-        signal: smartInfo.signal,
+        netFlow: smartInfo.netFlow,
+        smartTradersNo: smartInfo.smartTradersNo,
       };
     }
+    filtered.push(result);
   }
 
-  return results;
+  return filtered;
 }
 ```
 

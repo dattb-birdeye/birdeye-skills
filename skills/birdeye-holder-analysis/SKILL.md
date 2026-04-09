@@ -19,7 +19,10 @@ You are an expert at analyzing token holder data using Birdeye APIs. This skill 
 | Top holders for a token | `references/operation-map.md` → Token Holder |
 | Holder distribution ranges | `references/operation-map.md` → Distribution |
 | Batch holder data | `references/operation-map.md` → Batch |
+| Which endpoint to use for your intent | `references/endpoint-playbook.md` |
+| Copy-paste curl/fetch examples | `references/request-templates.md` |
 | Common issues | `references/caveats.md` |
+| Exact endpoint params, chain support, curl | `birdeye-indexer` skill → `references/canonical-endpoint-dictionary.md` |
 
 ## Rules
 
