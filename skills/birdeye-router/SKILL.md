@@ -141,7 +141,7 @@ WebSocket requires Business+. Wallet API: 30 rpm hard limit on all tiers.
 2. **Official MCP unavailable** → local `birdeye-api-docs` MCP → `birdeye_get_endpoint_info`
 3. **No MCP** → `Response` section in the domain skill's `operation-map.md`, or WebFetch the Docs URL
 
-On timeout/error: do NOT retry — fall back immediately to the next option.
+On timeout/error: do NOT retry — fall back immediately to the next option and continue the task.
 
 ---
 

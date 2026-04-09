@@ -4,18 +4,20 @@ Run these checks before making API calls in a new session.
 
 ---
 
-## 1. Network validation (required)
+## 1. Network validation
 
-Always call `/defi/networks` once per session to get the canonical list of supported chains:
+**Use the hardcoded list below — do not call `/defi/networks` or `/v1/wallet/list_supported_chain` via MCP.** These endpoints change rarely and MCP calls for them regularly time out (120s+).
+
+**REST API chains**: `solana`, `ethereum`, `arbitrum`, `avalanche`, `bsc`, `optimism`, `polygon`, `base`, `zksync`, `sui`
+
+**Wallet API chains** (`/wallet/v2/*`, `/v1/wallet/*`): **Solana only**
+
+Only call `/defi/networks` if the user explicitly asks to verify the live chain list:
 
 ```bash
 curl -sS "https://public-api.birdeye.so/defi/networks" \
-  -H "X-API-KEY: $BIRDEYE_API_KEY" \
-  -H "accept: application/json"
+  -H "X-API-KEY: $BIRDEYE_API_KEY" -H "accept: application/json"
 ```
-
-**Current chains** (as of spec):
-`solana`, `ethereum`, `arbitrum`, `avalanche`, `bsc`, `optimism`, `polygon`, `base`, `zksync`, `sui`
 
 ⚠️ Not all endpoints support all chains — see per-endpoint chain column in `canonical-endpoint-dictionary.md`.
 

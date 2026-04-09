@@ -41,7 +41,7 @@ Read `references/wss-policy.md` — URL format, headers, subscription messages, 
 | Official MCP unavailable | Use local `birdeye-api-docs` MCP → `birdeye_get_endpoint_info` |
 | No MCP at all | Read `Response` section in domain skill's `operation-map.md`, or WebFetch the Docs URL |
 
-**MCP timeout/error**: do NOT retry. Fall back immediately to the next option and continue.
+**MCP timeout/error**: do NOT retry. Fall back immediately to the next option and continue the task — never block on a failed MCP call.
 
 ## Reference files
 
