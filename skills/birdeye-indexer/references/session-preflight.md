@@ -32,7 +32,29 @@ curl -sS "https://public-api.birdeye.so/defi/networks" \
 
 ---
 
-## 2. Auth headers
+## 2. API key — where to find it
+
+**Do NOT search for `BIRDEYE_API_KEY` env var or `.mcp.json` files.** The key is stored in the MCP config.
+
+Priority order:
+1. **`~/.claude/settings.json`** → `mcpServers["birdeye-mcp"].args` → last element after `x-api-key:` (e.g. `"x-api-key:abc123"` → key is `abc123`)
+2. **User-provided** — ask the user directly if not found above
+
+```bash
+# Read key from settings.json (run this if key is not already known)
+node -e "
+const s = JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.claude/settings.json','utf8'));
+const args = s?.mcpServers?.['birdeye-mcp']?.args || [];
+const h = args.find(a => a.startsWith('x-api-key:'));
+console.log(h ? h.replace('x-api-key:','') : 'NOT FOUND');
+"
+```
+
+If not found: ask the user to run `npx birdeye-skills install --api-key YOUR_KEY` (get key at https://bds.birdeye.so).
+
+**Do NOT stop the task** — proceed with the key you found, or ask the user once and continue.
+
+## 3. Auth headers
 
 ```
 X-API-KEY: <your-api-key>        # required on ALL endpoints
@@ -40,11 +62,9 @@ x-chain: solana                   # required on chain-specific endpoints; omitti
 accept: application/json          # always include
 ```
 
-Get an API key at https://bds.birdeye.so
-
 ---
 
-## 3. Address format by chain (checksum)
+## 4. Address format by chain (checksum)
 
 Always validate address format before passing to API — wrong format returns empty results, not an error.
 
@@ -78,7 +98,7 @@ function normalizeEvmAddress(addr: string): string {
 
 ---
 
-## 4. `ui_amount_mode` — raw vs scaled
+## 5. `ui_amount_mode` — raw vs scaled
 
 Many endpoints support `ui_amount_mode` to control how token amounts are returned:
 
@@ -94,7 +114,7 @@ If omitted, default behavior is typically `scaled` for display-oriented endpoint
 
 ---
 
-## 5. Rate limits by tier
+## 6. Rate limits by tier
 
 | Tier | Requests/sec | Wallet API | WebSocket |
 |---|---|---|---|
