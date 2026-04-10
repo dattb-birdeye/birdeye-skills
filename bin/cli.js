@@ -73,8 +73,6 @@ const ALL_SKILLS = [
   'birdeye-research-assistant',
 ];
 
-const DOMAIN_SKILLS = ALL_SKILLS.filter(s => !s.includes('builder') && !s.includes('agent') && !s.includes('assistant') && s !== 'birdeye-router');
-const WORKFLOW_SKILLS = ALL_SKILLS.filter(s => s.includes('builder') || s.includes('agent') || s.includes('assistant'));
 
 // Cursor trigger descriptions for .mdc frontmatter
 const CURSOR_TRIGGERS = {
@@ -508,12 +506,12 @@ function checkForUpdates() {
   const sourceLabel = isGlobal ? 'global/npx' : 'local project';
 
   console.log('');
-  console.log(`  ${C.bold}dattb-bds-skills v${pkgVersion}${C.reset}  ${C.dim}(${sourceLabel}: ${PKG_ROOT})${C.reset}`);
+  console.log(`  ${C.bold}birdeye-skills v${pkgVersion}${C.reset}  ${C.dim}(${sourceLabel}: ${PKG_ROOT})${C.reset}`);
   console.log('');
 
   if (!config.installedAt) {
     warn('No install record found.');
-    info('Run: npx dattb-bds-skills install --all');
+    info('Run: npx birdeye-skills install');
     console.log('');
     return;
   }
@@ -522,7 +520,7 @@ function checkForUpdates() {
   const ageDays = Math.floor((Date.now() - new Date(config.installedAt).getTime()) / 86400000);
   if (ageDays >= SKILL_TTL_DAYS) {
     warn(`Skills are ${ageDays} days old (TTL: ${SKILL_TTL_DAYS} days) — update recommended`);
-    info('Run: npx dattb-bds-skills@latest install --all');
+    info('Run: npx birdeye-skills@latest install');
   } else {
     ok(`Skills are fresh — installed ${ageDays} day(s) ago (TTL: ${SKILL_TTL_DAYS} days)`);
   }
@@ -617,7 +615,7 @@ function updateAll() {
 
   if (Object.keys(installed).length === 0) {
     warn('No skills installed.');
-    info("Run: birdeye-skills install --all");
+    info("Run: birdeye-skills install");
     return;
   }
 
@@ -650,7 +648,7 @@ function listSkills() {
   console.log('');
   if (Object.keys(installed).length === 0) {
     warn('No skills installed.');
-    info("Run: birdeye-skills install --all");
+    info("Run: birdeye-skills install");
     console.log('');
     return;
   }
@@ -706,11 +704,11 @@ function pullLatest() {
   info('Fetching latest birdeye-skills from npm...');
   console.log('');
   try {
-    execSync('npx birdeye-skills@latest install --all', { stdio: 'inherit' });
+    execSync('npx birdeye-skills@latest install', { stdio: 'inherit' });
   } catch (err) {
     console.error('');
     console.error(`  ${C.red}✗${C.reset}  Update failed: ${err.message}`);
-    info('Manual: npx birdeye-skills@latest install --all');
+    info('Manual: npx birdeye-skills@latest install');
   }
 }
 
@@ -752,56 +750,30 @@ function docsSync() {
 
 function printHelp() {
   console.log(`
-Birdeye Skills CLI — Manage Birdeye AI skills
+Birdeye Skills — AI skills for Claude Code, Cursor, and Codex CLI
 
 Usage:
-  birdeye-skills <command> [options]
+  npx birdeye-skills install [--claude|--cursor|--codex|--bundle] [--api-key KEY]
 
-Commands:
-  install [options]       Install skills to AI assistants
+  No flags         Install for all platforms (Claude Code + Cursor + Codex)
+  --claude         Install for Claude Code only  (~/.claude/skills/)
+  --cursor         Install for Cursor only        (~/.cursor/rules/)
+  --codex          Install for Codex CLI only     (~/.codex/AGENTS.md)
+  --bundle [file]  Generate bundled prompt file   (ChatGPT / OpenAI API)
+  --api-key KEY    Set Birdeye API key in MCP config
 
-  Platform targets:
-    --claude              Install for Claude Code (default)
-    --cursor              Install for Cursor (.cursor/rules/*.mdc)
-    --codex               Generate AGENTS.md for OpenAI Codex CLI
-    --bundle [file]       Generate bundled prompt for ChatGPT / OpenAI API
-    --chatgpt             Alias for --bundle
-
-  Skill selection:
-    --all                 Install all 14 skills (default when no selection flag given)
-    --domain              Install domain skills only (router + indexer + 8)
-    --workflow            Install workflow skills only (4)
-    <skill-name>          Install a specific skill
-
-  Target:
-    --project <dir>       Install to a specific project
-    --path <dir>          Install to custom directory
-
-  MCP config:
-    --api-key <key>       Set Birdeye API key in MCP config
-    --skip-mcp            Skip auto MCP config generation
-
-  uninstall               Remove all installed skills (Claude, Cursor, Codex) and config
-  update                  Update all installed skills to latest version
-  pull                    Pull latest skills from registry and update
-  check                   Check for available updates
-  list                    List all skills and their install status
-  info <skill-name>       Show details about a specific skill
-  docs sync               Show guide for syncing new API endpoints
-  cache clear             Clear cached metadata
+Other commands:
+  uninstall        Remove all installed skills and config
+  update           Update installed skills to latest version
+  check            Check version and update status
+  list             List installed skills
 
 Examples:
-  birdeye-skills install --all                              # Claude Code personal
-  birdeye-skills install --all --project /path/to/app       # Claude Code project
-  birdeye-skills install --cursor --all --project /path     # Cursor rules
-  birdeye-skills install --codex --all --project /path      # Codex AGENTS.md
-  birdeye-skills install --bundle                           # Bundled prompt file
-  birdeye-skills install --bundle my-prompt.md --domain     # Custom file, domain only
-  birdeye-skills install birdeye-market-data                # Single skill
-  birdeye-skills install --all --project . --api-key KEY    # With API key in MCP config
-  birdeye-skills install --all --project . --skip-mcp       # Skip MCP config setup
-  birdeye-skills update                                     # Update installed skills
-  birdeye-skills pull                                       # Pull latest + update
+  npx birdeye-skills install                        # All platforms
+  npx birdeye-skills install --claude               # Claude Code only
+  npx birdeye-skills install --api-key YOUR_KEY     # With API key
+  npx birdeye-skills install --bundle               # ChatGPT prompt file
+  npx birdeye-skills uninstall                      # Remove everything
 `);
 }
 
@@ -817,43 +789,18 @@ async function main() {
 
   switch (command) {
     case 'install': {
-      let targetBase = CLAUDE_SKILLS_DIR;
-      let mode = 'personal';
-      let platform = 'all';       // default: install for all agents
-      let skillsToInstall = [];
-      let projectDir = '';
+      let platform = 'all';
       let bundleOutput = 'birdeye-system-prompt.md';
       let apiKey = '';
-      let skipMcp = false;
 
       for (let i = 1; i < args.length; i++) {
         switch (args[i]) {
-          case '--all':
-            skillsToInstall = [...ALL_SKILLS];
-            break;
-          case '--domain':
-            skillsToInstall = ['birdeye-router', ...DOMAIN_SKILLS];
-            break;
-          case '--workflow':
-            skillsToInstall = [...WORKFLOW_SKILLS];
-            break;
-          case '--claude':
-            platform = 'claude';
-            break;
-          case '--cursor':
-            platform = 'cursor';
-            break;
-          case '--codex':
-            platform = 'codex';
-            break;
+          case '--claude':  platform = 'claude'; break;
+          case '--cursor':  platform = 'cursor'; break;
+          case '--codex':   platform = 'codex';  break;
           case '--bundle':
             platform = 'bundle';
-            if (args[i + 1] && !args[i + 1].startsWith('-')) {
-              bundleOutput = args[++i];
-            }
-            break;
-          case '--chatgpt':
-            platform = 'bundle';
+            if (args[i + 1] && !args[i + 1].startsWith('-')) bundleOutput = args[++i];
             break;
           case '--api-key':
             if (!args[i + 1] || args[i + 1].startsWith('-')) {
@@ -862,67 +809,26 @@ async function main() {
             }
             apiKey = args[++i];
             break;
-          case '--skip-mcp':
-            skipMcp = true;
-            break;
-          case '--project':
-            if (!args[i + 1] || args[i + 1].startsWith('-')) {
-              console.error('Error: --project requires a directory argument.');
-              console.error('Usage: birdeye-skills install --all --project /path/to/your-project');
-              return;
-            }
-            projectDir = resolve(args[++i]);
-            if (!existsSync(projectDir)) {
-              console.error(`Error: project directory does not exist: ${projectDir}`);
-              return;
-            }
-            break;
-          case '--path':
-            targetBase = resolve(args[++i]);
-            mode = 'custom';
-            break;
           default:
-            if (ALL_SKILLS.includes(args[i])) {
-              skillsToInstall.push(args[i]);
-            } else {
-              console.error(`Unknown option or skill: ${args[i]}`);
-              console.log('Available skills:', ALL_SKILLS.join(', '));
-              return;
-            }
+            console.error(`Unknown option: ${args[i]}`);
+            printHelp();
+            return;
         }
       }
 
-      // Default: install all skills
-      if (skillsToInstall.length === 0) {
-        skillsToInstall = [...ALL_SKILLS];
-      }
+      const skillsToInstall = [...ALL_SKILLS];
+      const projectDir = '';
+      const claudeTarget = CLAUDE_SKILLS_DIR;
+      const cursorTarget = CURSOR_RULES_DIR;
+      const codexTarget  = CODEX_DIR;
 
-      // Resolve targets
-      const claudeTarget = projectDir ? join(projectDir, '.claude', 'skills') : CLAUDE_SKILLS_DIR;
-      const cursorTarget = projectDir ? join(projectDir, '.cursor', 'rules') : CURSOR_RULES_DIR;
-      const codexTarget  = projectDir || CODEX_DIR;
-
+      let mode;
       switch (platform) {
-        case 'all':
-          mode = projectDir ? `all agents — project (${projectDir})` : 'all agents — global';
-          break;
-        case 'claude':
-          if (mode !== 'custom') {
-            targetBase = claudeTarget;
-            mode = projectDir ? `claude project (${projectDir})` : 'claude personal';
-          }
-          break;
-        case 'cursor':
-          targetBase = cursorTarget;
-          mode = projectDir ? `cursor project (${projectDir})` : 'cursor global';
-          break;
-        case 'codex':
-          targetBase = codexTarget;
-          mode = projectDir ? `codex project (${projectDir})` : 'codex global';
-          break;
-        case 'bundle':
-          mode = `bundle → ${bundleOutput}`;
-          break;
+        case 'all':    mode = 'all agents — global'; break;
+        case 'claude': mode = 'claude — global'; break;
+        case 'cursor': mode = 'cursor — global'; break;
+        case 'codex':  mode = 'codex — global'; break;
+        case 'bundle': mode = `bundle → ${bundleOutput}`; break;
       }
 
       console.log('');
@@ -971,16 +877,16 @@ async function main() {
         switch (platform) {
           case 'claude':
             for (const skill of skillsToInstall) {
-              if (installSkillClaude(skill, targetBase, mode, !!projectDir)) installed++;
+              if (installSkillClaude(skill, claudeTarget, mode, false)) installed++;
             }
             break;
           case 'cursor':
             for (const skill of skillsToInstall) {
-              if (installSkillCursor(skill, targetBase)) installed++;
+              if (installSkillCursor(skill, cursorTarget)) installed++;
             }
             break;
           case 'codex':
-            installed = installSkillsCodex(skillsToInstall, targetBase);
+            installed = installSkillsCodex(skillsToInstall, codexTarget);
             break;
           case 'bundle':
             installed = installSkillsBundle(skillsToInstall, bundleOutput);
@@ -1008,21 +914,16 @@ async function main() {
         saveConfig(cfg);
       }
 
-      // Set up MCP config for project installs
-      let mcpConfigFile = null;
-      if (!skipMcp && platform !== 'bundle') {
+      // Set up MCP config
+      if (platform !== 'bundle') {
         console.log('');
         if (platform === 'all' || platform === 'claude') {
-          const claudeMcp = projectDir
-            ? join(projectDir, '.mcp.json')
-            : join(HOME, '.claude', 'settings.json');
+          const claudeMcp = join(HOME, '.claude', 'settings.json');
           setupMcpConfig(claudeMcp, apiKey);
           setupDocsMcp(claudeMcp);
         }
         if (platform === 'all' || platform === 'cursor') {
-          const cursorMcp = projectDir
-            ? join(projectDir, '.cursor', 'mcp.json')
-            : join(HOME, '.cursor', 'mcp.json');
+          const cursorMcp = join(HOME, '.cursor', 'mcp.json');
           setupMcpConfig(cursorMcp, apiKey);
           setupDocsMcp(cursorMcp);
         }
@@ -1032,40 +933,41 @@ async function main() {
       }
 
       // Interactive API key prompt when none was supplied
-      if (!apiKey && !process.env.BIRDEYE_API_KEY && !skipMcp && platform !== 'bundle') {
+      if (!apiKey && !process.env.BIRDEYE_API_KEY && platform !== 'bundle') {
         console.log('');
         info('Get a free API key: https://bds.birdeye.so → Usages → Security → Generate key');
         const enteredKey = await readApiKey();
         if (enteredKey) {
-          if (mcpConfigFile) {
+          // Write entered key to all relevant MCP configs
+          const mcpFiles = [];
+          if (platform === 'all' || platform === 'claude') mcpFiles.push(join(HOME, '.claude', 'settings.json'));
+          if (platform === 'all' || platform === 'cursor') mcpFiles.push(join(HOME, '.cursor', 'mcp.json'));
+          for (const f of mcpFiles) {
             try {
               let cfg = {};
-              if (existsSync(mcpConfigFile)) cfg = JSON.parse(readFileSync(mcpConfigFile, 'utf8'));
+              if (existsSync(f)) cfg = JSON.parse(readFileSync(f, 'utf8'));
               cfg.mcpServers = cfg.mcpServers || {};
               cfg.mcpServers['birdeye-mcp'] = cfg.mcpServers['birdeye-mcp'] || {};
               cfg.mcpServers['birdeye-mcp'].env = cfg.mcpServers['birdeye-mcp'].env || {};
               cfg.mcpServers['birdeye-mcp'].env.API_KEY = enteredKey;
-              writeFileSync(mcpConfigFile, JSON.stringify(cfg, null, 2));
-              ok(`API key saved → ${mcpConfigFile}`);
+              writeFileSync(f, JSON.stringify(cfg, null, 2));
+              ok(`API key saved → ${f}`);
             } catch (e) {
-              warn(`Could not write API key: ${e.message}`);
+              warn(`Could not write API key to ${f}: ${e.message}`);
             }
           }
         } else {
           console.log('');
-          info('  To set your API key later:');
-          if (mcpConfigFile) {
-            console.log(`       File: ${mcpConfigFile}`);
-            console.log('');
-            console.log(`       sed -i '' 's|<YOUR_BIRDEYE_API_KEY>|YOUR_KEY|' "${mcpConfigFile}"`);
-          } else {
-            info('  Run: npx birdeye-skills install --all --api-key YOUR_KEY');
-          }
+          info('To set your API key later:');
+          console.log(`       npx birdeye-skills install --api-key YOUR_KEY`);
         }
       }
 
+      const pkgPath = join(PKG_ROOT, 'package.json');
+      const pkgVersion = existsSync(pkgPath) ? JSON.parse(readFileSync(pkgPath, 'utf-8')).version : 'unknown';
       console.log('');
-      console.log(`  ${C.dim}Update when needed: npx birdeye-skills@latest install --all${C.reset}`);
+      console.log(`  ${C.dim}Version:            birdeye-skills v${pkgVersion}${C.reset}`);
+      console.log(`  ${C.dim}Update when needed: npx birdeye-skills@latest install${C.reset}`);
       console.log(`  ${C.dim}Next TTL check:     ${new Date(Date.now() + SKILL_TTL_DAYS * 86400000).toLocaleDateString()}${C.reset}`);
       console.log('');
       break;
