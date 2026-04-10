@@ -8,105 +8,82 @@ Supports Claude Code, Cursor, OpenAI Codex CLI, and ChatGPT/OpenAI API.
 
 ## Quick Start
 
-### Option 1: Claude Code plugin (recommended)
-
 ```bash
-npx skills add birdeye-so/birdeye-skills -g --yes
+# Install for all platforms (Claude Code + Cursor + Codex)
+npx birdeye-skills install
+
+# With your Birdeye API key (auto-configures MCP)
+npx birdeye-skills install --api-key YOUR_KEY
 ```
 
-Installs all 14 skills globally to `~/.claude/skills/` in one command — no clone needed.
+Get an API key at **https://bds.birdeye.so** → Usages → Security → Generate key
 
-### Option 2: npm / npx
+### Platform-specific installs
 
 ```bash
-# Install globally (Claude Code personal)
-npx birdeye-skills install --all
-
-# Install to a project
-npx birdeye-skills install --all --project /path/to/app
-
-# Cursor
-npx birdeye-skills install --cursor --all
-npx birdeye-skills install --cursor --all --project /path/to/app
-
-# OpenAI Codex CLI
-npx birdeye-skills install --codex --all --project /path/to/app
-
-# ChatGPT / OpenAI API (bundle to file)
-npx birdeye-skills install --bundle
+npx birdeye-skills install --claude       # Claude Code only
+npx birdeye-skills install --cursor       # Cursor only
+npx birdeye-skills install --codex        # OpenAI Codex CLI only
+npx birdeye-skills install --bundle       # ChatGPT / OpenAI API (prompt file)
 ```
 
-### Option 3: Shell script (no Node.js required)
+### Shell script (no Node.js required)
 
 ```bash
 git clone https://github.com/birdeye-so/birdeye-skills.git
 cd birdeye-skills
 
-./install.sh                                    # Claude Code personal
-./install.sh --project /path/to/app             # Claude Code project
-./install.sh --cursor                           # Cursor global (~/.cursor/rules)
-./install.sh --cursor --project /path/to/app    # Cursor project
+./install.sh                                    # All platforms
+./install.sh --claude                           # Claude Code only
+./install.sh --cursor                           # Cursor
 ./install.sh --codex --project /path/to/app     # Codex AGENTS.md
 ./install.sh --bundle                           # Bundled prompt file
-./install.sh --domain                           # Domain skills only (9)
-./install.sh birdeye-market-data                # Single skill
 ```
 
 ---
 
-## MCP Integration
+## API Key & MCP
 
-### Official Birdeye MCP Server (API calls)
+### API Key
 
-Birdeye provides an official remote MCP server (Beta) exposing 21 API endpoints as MCP tools — the AI can call Birdeye API directly, no manual curl needed.
+Get a free key at **https://bds.birdeye.so** → Usages → Security → Generate key.
 
-**API Key**: Login to https://bds.birdeye.so → Usages → Security → Generate key
+The CLI stores the key in your MCP config so skills can read it automatically:
 
-**Docs**: https://docs.birdeye.so/docs/birdeye-ai
+```bash
+npx birdeye-skills install --api-key YOUR_KEY   # set on first install
+npx birdeye-skills install --api-key NEW_KEY    # update any time
+```
+
+### How API calls work
+
+Skills call the Birdeye REST API **directly** — no MCP hop required. The API key is read from `~/.claude/settings.json` and used in curl/fetch:
+
+```bash
+curl -sS "https://public-api.birdeye.so/defi/price?address=<TOKEN>" \
+  -H "X-API-KEY: YOUR_KEY" \
+  -H "x-chain: solana" \
+  -H "accept: application/json"
+```
+
+### Official Birdeye MCP (optional)
+
+The official remote MCP (`mcp.birdeye.so`) is a proxy to the same REST API — it is **not required** when using these skills. Auto-configured by the CLI for environments that prefer MCP tools over direct curl:
 
 ```json
 {
   "mcpServers": {
     "birdeye-mcp": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote@0.1.38",
-        "https://mcp.birdeye.so/mcp",
-        "--header",
-        "x-api-key:${API_KEY}"
-      ],
-      "env": {
-        "API_KEY": "<YOUR_BIRDEYE_API_KEY>"
-      }
+      "args": ["-y", "mcp-remote@0.1.38", "https://mcp.birdeye.so/mcp", "--header", "x-api-key:YOUR_KEY"]
     }
   }
 }
 ```
 
-| Platform | Config file |
-|---|---|
-| Claude Code (project) | `.mcp.json` |
-| Claude Code (personal) | `~/.claude/settings.json` |
-| Cursor | `.cursor/mcp.json` |
-| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
-| GitHub Copilot | `.vscode/mcp.json` |
-| Gemini CLI | `~/.gemini/settings.json` |
-| OpenAI Codex | `~/.codex/config.toml` |
+### Docs Companion MCP (endpoint discovery)
 
-The npm CLI auto-configures MCP when installing with `--api-key`:
-
-```bash
-npx birdeye-skills install --all --project . --api-key YOUR_KEY
-```
-
-### Fallback: Docs Companion MCP
-
-If the official MCP is unavailable (outage, no API key, offline), add this local fallback — powered by the official [Birdeye OpenAPI spec](https://assets.birdeye.so/bds/docs/openapi_docs.json) fetched and cached locally.
-
-```bash
-cd birdeye-mcp && npm install
-```
+Local MCP server powered by the [Birdeye OpenAPI spec](https://assets.birdeye.so/bds/docs/openapi_docs.json), cached and refreshed every 24h. Auto-installed alongside skills. Useful when you need to look up an endpoint not covered in skill files.
 
 ```json
 {
@@ -121,11 +98,9 @@ cd birdeye-mcp && npm install
 
 | Tool | Purpose |
 |---|---|
-| `birdeye_list_endpoints` | List all 75+ endpoints grouped by domain |
+| `birdeye_list_endpoints` | List all endpoints grouped by domain |
 | `birdeye_search_endpoints` | Search endpoints by keyword |
 | `birdeye_get_endpoint_info` | Get params, types, required flags, and docs URL |
-
-Spec is fetched once and cached at `~/.birdeye/openapi-cache.json` (refreshed every 24h). Falls back to stale cache if offline.
 
 ---
 
@@ -157,29 +132,17 @@ Once installed, just describe what you want — the router dispatches automatica
 Skills have a **7-day TTL**. The CLI checks `~/.birdeye/skills-config.json` and prompts you to update when skills are stale.
 
 ```bash
-# Pull latest from npm and reinstall
-npx birdeye-skills@latest install --all
+# Update to latest
+npx birdeye-skills@latest install
 
-# Or via shell script
-git pull && ./install.sh
-
-# Check TTL status
+# Check version and TTL status
 npx birdeye-skills check
 
-# List installed skills and versions
+# List installed skills
 npx birdeye-skills list
-```
 
-### Adding a New API Endpoint
-
-1. Identify which domain skill it belongs to (see table below)
-2. Edit `skills/<skill>/references/operation-map.md` — add the endpoint
-3. Edit `skills/<skill>/references/caveats.md` if needed
-4. Bump `version` in `skills/<skill>/SKILL.md` frontmatter
-5. Reinstall: `npx birdeye-skills install --all` or `./install.sh`
-
-```bash
-npx birdeye-skills docs sync     # Shows the full guide
+# Uninstall everything
+npx birdeye-skills uninstall
 ```
 
 ---
@@ -187,6 +150,9 @@ npx birdeye-skills docs sync     # Shows the full guide
 ## Architecture
 
 ```
+Infrastructure
+└── birdeye-indexer                   Canonical endpoint dictionary + shared policies
+
 Tier 1: Router
 └── birdeye-router                    Intent dispatcher
 
@@ -236,53 +202,12 @@ Solana, Ethereum, BSC, Arbitrum, Optimism, Polygon, Avalanche, Base, zkSync, Sui
 
 ## Cross-Platform Support
 
-| Platform | Command | Output |
-|---|---|---|
-| **Claude Code** (plugin) | `npx skills add birdeye-so/birdeye-skills -g --yes` | `~/.claude/skills/` |
-| **Claude Code** (personal) | `npx birdeye-skills install --all` | `~/.claude/skills/` |
-| **Claude Code** (project) | `npx birdeye-skills install --all --project DIR` | `DIR/.claude/skills/` |
-| **Cursor** (global) | `npx birdeye-skills install --cursor --all` | `~/.cursor/rules/` |
-| **Cursor** (project) | `npx birdeye-skills install --cursor --all --project DIR` | `DIR/.cursor/rules/` |
-| **OpenAI Codex CLI** | `npx birdeye-skills install --codex --all --project DIR` | `DIR/AGENTS.md` |
-| **ChatGPT / OpenAI API** | `npx birdeye-skills install --bundle` | `birdeye-system-prompt.md` |
-
----
-
-## Repo Structure
-
-```
-birdeye-skills/
-  .claude-plugin/
-    plugin.json           # Claude Code plugin metadata
-  skills/
-    birdeye-router/
-      SKILL.md
-    birdeye-market-data/
-      SKILL.md
-      references/
-        operation-map.md  # Endpoint paths, params, docs URL, key fields
-        caveats.md        # Common mistakes and edge cases
-        preflight.md      # Pre-request checklist (optional)
-        templates.md      # Code templates (optional)
-    birdeye-token-discovery/
-    birdeye-transaction-flow/
-    birdeye-wallet-intelligence/
-    birdeye-holder-analysis/
-    birdeye-security-analysis/
-    birdeye-smart-money/
-    birdeye-realtime-streams/
-    birdeye-wallet-dashboard-builder/
-    birdeye-token-screener-builder/
-    birdeye-alert-agent/
-    birdeye-research-assistant/
-  bin/
-    cli.js                # npm CLI (npx birdeye-skills)
-  birdeye-mcp/
-    index.js              # Fallback MCP server (OpenAPI-powered, no build step)
-    package.json
-  install.sh              # Shell installer (no Node.js required)
-  package.json            # npm package (name: birdeye-skills)
-```
+| Platform | Command |
+|---|---|
+| **Claude Code** | `npx birdeye-skills install --claude` → `~/.claude/skills/` |
+| **Cursor** | `npx birdeye-skills install --cursor` → `~/.cursor/rules/` |
+| **OpenAI Codex CLI** | `npx birdeye-skills install --codex` → `~/.codex/AGENTS.md` |
+| **ChatGPT / OpenAI API** | `npx birdeye-skills install --bundle` → `birdeye-system-prompt.md` |
 
 ---
 
@@ -292,50 +217,64 @@ birdeye-skills/
 npx birdeye-skills <command> [options]
 
 Commands:
-  install [options]       Install skills
+  install               Install all skills for all platforms (default)
+  install --claude      Claude Code only  (~/.claude/skills/)
+  install --cursor      Cursor only       (~/.cursor/rules/)
+  install --codex       Codex CLI only    (~/.codex/AGENTS.md)
+  install --bundle      ChatGPT / OpenAI API (prompt file)
+  install --api-key KEY Set/update API key in MCP config
 
-  Platform (default: all agents):
-    (none)                Claude + Cursor + Codex global (default)
-    --claude              Claude Code only  (~/.claude/skills/)
-    --cursor              Cursor only       (~/.cursor/rules/)
-    --codex               Codex CLI only    (~/.codex/AGENTS.md)
-    --bundle [file]       ChatGPT / OpenAI API (system prompt file)
-
-  Skill selection:
-    --all                 All 14 skills (default when no selection flag given)
-    --domain              Router + indexer + 8 domain skills
-    --workflow            4 workflow skills
-    <skill-name>          Single skill
-
-  Target:
-    --project DIR         Install to project directory (scoped)
-    --path DIR            Custom directory
-
-  MCP:
-    --api-key KEY         Set API key in MCP config
-    --skip-mcp            Skip MCP config generation
-
-  update                  Reinstall skills from recorded install config
-  pull                    Fetch latest from npm and reinstall
-  check                   Check TTL and version status
-  list                    Show installed skills
-  info <skill-name>       Show skill details
-  docs sync               Guide for adding new API endpoints
-  cache clear             Clear install metadata
+  uninstall             Remove all installed skills and config
+  update                Update installed skills to latest version
+  check                 Check version and update status
+  list                  Show installed skills and versions
 
 Examples:
-  npx birdeye-skills install --all                             # All agents (global)
-  npx birdeye-skills install --all --project .                 # All agents (project)
-  npx birdeye-skills install --all --project . --api-key KEY   # With MCP key
-  npx birdeye-skills install --claude --all                    # Claude only
-  npx birdeye-skills install --cursor --all                    # Cursor only (global)
-  npx birdeye-skills install --codex --all --project .         # Codex (project)
-  npx birdeye-skills install --bundle                          # ChatGPT bundle
-  npx birdeye-skills@latest install --all                      # Update to latest
-  npx birdeye-skills check                                     # Check TTL status
+  npx birdeye-skills install                    # All platforms
+  npx birdeye-skills install --claude           # Claude only
+  npx birdeye-skills install --api-key YOUR_KEY # With API key
+  npx birdeye-skills install --bundle           # ChatGPT prompt file
+  npx birdeye-skills@latest install             # Update to latest version
+  npx birdeye-skills uninstall                  # Remove everything
 ```
 
-## Rate Limits by Tier
+---
+
+## Repo Structure
+
+```
+birdeye-skills/
+  skills/
+    birdeye-indexer/
+      SKILL.md
+      references/
+        canonical-endpoint-dictionary.md  # Ground truth for all endpoints
+        session-preflight.md              # Auth, API key location, rate limits
+        error-handling.md
+        pagination.md
+        wss-policy.md
+    birdeye-router/
+      SKILL.md
+      references/                         # Redirect stubs → birdeye-indexer
+    birdeye-market-data/
+      SKILL.md
+      references/
+        operation-map.md                  # Endpoint details + curl examples
+        request-templates.md
+        endpoint-playbook.md
+        caveats.md
+    ... (8 more domain skills + 4 workflow skills)
+  bin/
+    cli.js                                # npm CLI
+  birdeye-mcp/
+    index.js                              # Fallback MCP server (OpenAPI-powered)
+  install.sh                              # Shell installer (no Node.js required)
+  package.json
+```
+
+---
+
+## Rate Limits
 
 | Tier | Rate Limit | WebSocket |
 |---|---|---|
@@ -345,41 +284,26 @@ Examples:
 | Business | 100 rps / 1500 rpm | Yes |
 | Enterprise | Custom | Yes |
 
-**Wallet API**: 30 rpm hard limit regardless of tier.
-
-See [`SYSTEM-PROMPTS.md`](./SYSTEM-PROMPTS.md) for detailed integration architecture.
+**Wallet API** (`/wallet/v2/*`, `/v1/wallet/*`): 30 rpm hard limit on all tiers.
 
 ---
 
 ## For Developers
 
-### Test CLI locally with npm link
-
 ```bash
 git clone https://github.com/birdeye-so/birdeye-skills
 cd birdeye-skills
-
-# Link the package globally (no npm publish needed)
+npm install
 npm link
 
 # Now use the CLI anywhere
-birdeye-skills install --all
-birdeye-skills list
+birdeye-skills install
 birdeye-skills check
 
-# When done testing
-npm unlink -g dattb-birdeye-skills
+# When done
+npm unlink -g birdeye-skills
 ```
 
-Edit files under `skills/` or `bin/cli.js`, then re-run commands immediately — no build step needed.
+Edit files under `skills/` or `bin/cli.js` and re-run commands — no build step needed.
 
-### Test the fallback MCP locally
-
-```bash
-cd birdeye-mcp && npm install
-
-# Smoke test — should hang silently (waiting for MCP stdio)
-node index.js
-```
-
-Add to MCP config with the absolute path to `birdeye-mcp/index.js`.
+See [`SYSTEM-PROMPTS.md`](./SYSTEM-PROMPTS.md) for detailed integration architecture.
