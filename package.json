@@ -32,6 +32,9 @@
     "url": "git+https://github.com/birdeye-so/birdeye-skills.git"
   },
   "homepage": "https://docs.birdeye.so/docs/birdeye-ai",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2"
+  },
   "engines": {
     "node": ">=18"
   }

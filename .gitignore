@@ -1,4 +1,5 @@
 node_modules/
+birdeye-mcp/node_modules/
 dist/
 *.tsbuildinfo
 
