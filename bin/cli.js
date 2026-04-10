@@ -388,19 +388,18 @@ You are an expert in Birdeye's multi-chain DeFi analytics API. You can help user
 // MCP Config Setup
 // ---------------------------------------------------------------------------
 
-const BIRDEYE_MCP_CONFIG = {
-  command: 'npx',
-  args: [
-    '-y',
-    'mcp-remote@0.1.38',
-    'https://mcp.birdeye.so/mcp',
-    '--header',
-    'x-api-key:${API_KEY}',
-  ],
-  env: {
-    API_KEY: '<YOUR_BIRDEYE_API_KEY>',
-  },
-};
+function makeBirdeyeMcpConfig(apiKey = '<YOUR_BIRDEYE_API_KEY>') {
+  return {
+    command: 'npx',
+    args: [
+      '-y',
+      'mcp-remote@0.1.38',
+      'https://mcp.birdeye.so/mcp',
+      '--header',
+      `x-api-key:${apiKey}`,
+    ],
+  };
+}
 
 function readApiKey() {
   return new Promise((resolve) => {
@@ -427,25 +426,29 @@ function setupMcpConfig(configFile, apiKey) {
   const configDir = dirname(configFile);
   mkdirSync(configDir, { recursive: true });
 
-  const mcpEntry = { ...BIRDEYE_MCP_CONFIG };
-  if (apiKey) {
-    mcpEntry.env = { API_KEY: apiKey };
+  const mcpEntry = makeBirdeyeMcpConfig(apiKey || '<YOUR_BIRDEYE_API_KEY>');
+  const fileName = configFile.split('/').pop();
+
+  let existing = {};
+  if (existsSync(configFile)) {
+    existing = JSON.parse(readFileSync(configFile, 'utf-8'));
   }
 
-  if (existsSync(configFile)) {
-    const existing = JSON.parse(readFileSync(configFile, 'utf-8'));
-    if (existing.mcpServers && existing.mcpServers['birdeye-mcp']) {
-      ok('MCP: birdeye-mcp already configured');
-      return;
-    }
-    existing.mcpServers = existing.mcpServers || {};
-    existing.mcpServers['birdeye-mcp'] = mcpEntry;
-    writeFileSync(configFile, JSON.stringify(existing, null, 2) + '\n');
-    ok(`MCP: Added birdeye-mcp to ${configFile.split('/').pop()}`);
+  const alreadyExists = existing.mcpServers && existing.mcpServers['birdeye-mcp'];
+
+  if (alreadyExists && !apiKey) {
+    ok(`MCP: birdeye-mcp already configured (${fileName})`);
+    return;
+  }
+
+  existing.mcpServers = existing.mcpServers || {};
+  existing.mcpServers['birdeye-mcp'] = mcpEntry;
+  writeFileSync(configFile, JSON.stringify(existing, null, 2) + '\n');
+
+  if (alreadyExists) {
+    ok(`MCP: birdeye-mcp API key updated (${fileName})`);
   } else {
-    const config = { mcpServers: { 'birdeye-mcp': mcpEntry } };
-    writeFileSync(configFile, JSON.stringify(config, null, 2) + '\n');
-    ok(`MCP: Created ${configFile.split('/').pop()}`);
+    ok(`MCP: birdeye-mcp configured (${fileName})`);
   }
 }
 
@@ -947,9 +950,7 @@ async function main() {
               let cfg = {};
               if (existsSync(f)) cfg = JSON.parse(readFileSync(f, 'utf8'));
               cfg.mcpServers = cfg.mcpServers || {};
-              cfg.mcpServers['birdeye-mcp'] = cfg.mcpServers['birdeye-mcp'] || {};
-              cfg.mcpServers['birdeye-mcp'].env = cfg.mcpServers['birdeye-mcp'].env || {};
-              cfg.mcpServers['birdeye-mcp'].env.API_KEY = enteredKey;
+              cfg.mcpServers['birdeye-mcp'] = makeBirdeyeMcpConfig(enteredKey);
               writeFileSync(f, JSON.stringify(cfg, null, 2));
               ok(`API key saved → ${f}`);
             } catch (e) {
