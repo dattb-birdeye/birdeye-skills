@@ -30,7 +30,7 @@ The user's specific request, processed by the harness using skill knowledge.
 3. For complex use cases, load the appropriate workflow skill
 
 ### Lazy Loading
-- Don't load all 13 skills at once — too many tokens
+- Don't load all 14 skills at once — too many tokens
 - Load domain skills on-demand based on router disambiguation
 - Reference files are loaded only when the specific endpoint is needed
 
@@ -50,7 +50,7 @@ birdeye-plugin/
     ├── token-discovery/
     │   ├── SKILL.md
     │   └── references/
-    ... (all 13 skills)
+    ... (all 14 skills)
 ```
 
 ### CLI Agent
@@ -68,7 +68,7 @@ birdeye-plugin/
     │   ├── SKILL.md
     │   ├── references/
     │   └── prompts/
-    ... (all 13 skills)
+    ... (all 14 skills)
 ```
 
 ### Cursor
@@ -99,7 +99,7 @@ Install: `./install.sh --cursor --project /path/to/your-project`
 
 ```
 <project>/
-└── AGENTS.md    # All skills bundled with operation maps + caveats
+└── AGENTS.md    # All skills bundled with all reference files + shared birdeye-indexer references
 ```
 
 Single `AGENTS.md` file with all Birdeye API knowledge. Codex CLI reads this automatically.

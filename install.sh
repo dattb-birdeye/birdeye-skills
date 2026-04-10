@@ -51,6 +51,7 @@ print_step() { echo -e "\n${C_BOLD}$*${C_NC}"; }
 
 ALL_SKILLS=(
   birdeye-router
+  birdeye-indexer
   birdeye-market-data
   birdeye-token-discovery
   birdeye-transaction-flow
@@ -67,6 +68,7 @@ ALL_SKILLS=(
 
 DOMAIN_SKILLS=(
   birdeye-router
+  birdeye-indexer
   birdeye-market-data
   birdeye-token-discovery
   birdeye-transaction-flow
@@ -148,8 +150,8 @@ Platform targets:
                   (default: birdeye-system-prompt.md)
 
 Skill selection:
-  --all           Install all 13 skills (default)
-  --domain        Install router + 8 domain skills only
+  --all           Install all 14 skills (default)
+  --domain        Install router + indexer + 8 domain skills only
   --workflow      Install 4 workflow skills only
   <skill-name>    Install a specific skill
 
@@ -403,8 +405,13 @@ install_skill_codex() {
   local src_dir="$SCRIPT_DIR/skills/$skill_name"
   local skill_md="$src_dir/SKILL.md"
 
+  # Router and indexer are handled separately in finalize_codex
+  if [[ "$skill_name" == "birdeye-router" || "$skill_name" == "birdeye-indexer" ]]; then
+    return 0
+  fi
+
   if [ ! -f "$skill_md" ]; then
-    echo "  SKIP: $skill_name (SKILL.md not found)"
+    print_skip "$skill_name (SKILL.md not found)"
     return 1
   fi
 
@@ -412,14 +419,17 @@ install_skill_codex() {
   CODEX_CONTENT+="## ${skill_name}"$'\n\n'
   CODEX_CONTENT+="$(strip_frontmatter "$skill_md")"
 
-  # Inline operation-map and caveats (key references)
-  for ref in operation-map caveats; do
-    if [ -f "$src_dir/references/${ref}.md" ]; then
+  # Inline ALL reference files (not just operation-map + caveats)
+  local refs_dir="$src_dir/references"
+  if [ -d "$refs_dir" ]; then
+    for ref_file in $(ls "$refs_dir"/*.md 2>/dev/null | sort); do
+      local ref_name
+      ref_name="$(basename "$ref_file" .md)"
       CODEX_CONTENT+=$'\n\n'
-      CODEX_CONTENT+="### ${ref}"$'\n\n'
-      CODEX_CONTENT+="$(cat "$src_dir/references/${ref}.md")"
-    fi
-  done
+      CODEX_CONTENT+="### ${ref_name}"$'\n\n'
+      CODEX_CONTENT+="$(cat "$ref_file")"
+    done
+  fi
 
   print_ok "$skill_name"
   return 0
@@ -439,7 +449,7 @@ finalize_codex() {
   cat > "$output" <<'HEADER'
 # Birdeye DeFi Analytics Agent
 
-You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills below to handle user requests about token prices, wallet analysis, smart money tracking, and more.
+You are an expert in Birdeye's multi-chain DeFi analytics API. All domain skills are bundled in this file — use the relevant section directly without routing or delegation.
 
 ## Prerequisites
 
@@ -459,7 +469,48 @@ You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills be
 | Enterprise | Custom |
 
 **Wallet API**: 30 rpm hard limit regardless of tier.
+
+## Intent → Section Map
+
+| User asks about | Go to section |
+|---|---|
+| token price, OHLCV, candles, chart | birdeye-market-data |
+| find token, trending, new listing, search | birdeye-token-discovery |
+| trades, transactions, balance change, mint/burn | birdeye-transaction-flow |
+| wallet portfolio, net worth, PnL, top traders | birdeye-wallet-intelligence |
+| holder distribution, top holders, concentration | birdeye-holder-analysis |
+| rug pull, security risk, mint/freeze authority | birdeye-security-analysis |
+| smart money, whale flow, smart wallets | birdeye-smart-money |
+| real-time, live stream, WebSocket | birdeye-realtime-streams |
+| wallet dashboard, portfolio monitor | birdeye-wallet-dashboard-builder |
+| token screener, alpha finder | birdeye-token-screener-builder |
+| price/whale alert, volume spike monitor | birdeye-alert-agent |
+| research report, due diligence | birdeye-research-assistant |
 HEADER
+
+  # Inline birdeye-indexer as Shared References (source of truth for all endpoints)
+  local indexer_refs="$SCRIPT_DIR/skills/birdeye-indexer/references"
+  if [ -d "$indexer_refs" ]; then
+    {
+      echo ""
+      echo ""
+      echo "---"
+      echo ""
+      echo "## Shared References (birdeye-indexer)"
+      echo ""
+      echo "> Canonical endpoint dictionary and shared policies used by all skills below."
+      for ref_file in $(ls "$indexer_refs"/*.md 2>/dev/null | sort); do
+        local ref_name
+        ref_name="$(basename "$ref_file" .md)"
+        echo ""
+        echo ""
+        echo "### ${ref_name}"
+        echo ""
+        cat "$ref_file"
+      done
+    } >> "$output"
+    print_ok "birdeye-indexer (shared references)"
+  fi
 
   echo "$CODEX_CONTENT" >> "$output"
 
@@ -839,9 +890,14 @@ if [[ "$SKIP_MCP" != "true" ]]; then
       setup_mcp_config "$MCP_CONFIG_FILE"
       ;;
     codex)
-      MCP_CONFIG_FILE="${CODEX_CONFIG_FILE:-$HOME/.codex/config.toml}"
-      MCP_CONFIG_TYPE="toml"
-      setup_codex_mcp_config
+      if [[ -z "$PROJECT_DIR" ]]; then
+        MCP_CONFIG_FILE="${CODEX_CONFIG_FILE:-$HOME/.codex/config.toml}"
+        MCP_CONFIG_TYPE="toml"
+        setup_codex_mcp_config
+      else
+        print_info "Codex MCP: add birdeye-mcp to ~/.codex/config.toml manually (project installs do not write global config)"
+        MCP_CONFIG_TYPE="bundle"
+      fi
       ;;
     bundle)
       MCP_CONFIG_TYPE="bundle"

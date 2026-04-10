@@ -14,7 +14,7 @@ Supports Claude Code, Cursor, OpenAI Codex CLI, and ChatGPT/OpenAI API.
 npx skills add birdeye-so/birdeye-skills -g --yes
 ```
 
-Installs all 13 skills globally to `~/.claude/skills/` in one command — no clone needed.
+Installs all 14 skills globally to `~/.claude/skills/` in one command — no clone needed.
 
 ### Option 2: npm / npx
 
@@ -154,7 +154,7 @@ Once installed, just describe what you want — the router dispatches automatica
 
 ## Updating Skills
 
-Skills have a **7-day TTL**. The router skill checks `~/.birdeye/skills-config.json` and prompts you to update when skills are stale.
+Skills have a **7-day TTL**. The CLI checks `~/.birdeye/skills-config.json` and prompts you to update when skills are stale.
 
 ```bash
 # Pull latest from npm and reinstall
@@ -302,8 +302,8 @@ Commands:
     --bundle [file]       ChatGPT / OpenAI API (system prompt file)
 
   Skill selection:
-    --all                 All 13 skills (default)
-    --domain              Router + 8 domain skills
+    --all                 All 14 skills (default when no selection flag given)
+    --domain              Router + indexer + 8 domain skills
     --workflow            4 workflow skills
     <skill-name>          Single skill
 

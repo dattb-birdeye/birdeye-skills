@@ -58,6 +58,7 @@ const DOCS_MCP_INDEX       = join(DOCS_MCP_DIR, 'index.js');
 
 const ALL_SKILLS = [
   'birdeye-router',
+  'birdeye-indexer',
   'birdeye-market-data',
   'birdeye-token-discovery',
   'birdeye-transaction-flow',
@@ -132,7 +133,7 @@ function loadVersions() {
 // Platform Install: Claude Code
 // ---------------------------------------------------------------------------
 
-function installSkillClaude(skillName, targetBase, mode = 'personal') {
+function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobalConfig = false) {
   const srcDir = join(LOCAL_SKILLS_DIR, skillName);
   const skillMdPath = join(srcDir, 'SKILL.md');
 
@@ -162,17 +163,19 @@ function installSkillClaude(skillName, targetBase, mode = 'personal') {
   };
   writeFileSync(join(target, '.birdeye-meta.json'), JSON.stringify(meta, null, 2));
 
-  // Update config
-  const config = loadConfig();
-  config.installed = config.installed || {};
-  config.installed[skillName] = {
-    version: meta.version,
-    installedAt: meta.installedAt,
-    path: target,
-    mode,
-    platform: 'claude',
-  };
-  saveConfig(config);
+  // Update global config (skipped for project installs — project path is tracked locally via .birdeye-meta.json)
+  if (!skipGlobalConfig) {
+    const config = loadConfig();
+    config.installed = config.installed || {};
+    config.installed[skillName] = {
+      version: meta.version,
+      installedAt: meta.installedAt,
+      path: target,
+      mode,
+      platform: 'claude',
+    };
+    saveConfig(config);
+  }
 
   ok(skillName);
   return true;
@@ -234,7 +237,7 @@ function installSkillsCodex(skillNames, targetBase) {
 
   let content = `# Birdeye DeFi Analytics Agent
 
-You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills below to handle user requests about token prices, wallet analysis, smart money tracking, and more.
+You are an expert in Birdeye's multi-chain DeFi analytics API. All domain skills are bundled in this file — use the relevant section directly without routing or delegation.
 
 ## Prerequisites
 
@@ -254,10 +257,44 @@ You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills be
 | Enterprise | Custom |
 
 **Wallet API**: 30 rpm hard limit regardless of tier.
+
+## Intent → Section Map
+
+| User asks about | Go to section |
+|---|---|
+| token price, OHLCV, candles, chart | birdeye-market-data |
+| find token, trending, new listing, search | birdeye-token-discovery |
+| trades, transactions, balance change, mint/burn | birdeye-transaction-flow |
+| wallet portfolio, net worth, PnL, top traders | birdeye-wallet-intelligence |
+| holder distribution, top holders, concentration | birdeye-holder-analysis |
+| rug pull, security risk, mint/freeze authority | birdeye-security-analysis |
+| smart money, whale flow, smart wallets | birdeye-smart-money |
+| real-time, live stream, WebSocket | birdeye-realtime-streams |
+| wallet dashboard, portfolio monitor | birdeye-wallet-dashboard-builder |
+| token screener, alpha finder | birdeye-token-screener-builder |
+| price/whale alert, volume spike monitor | birdeye-alert-agent |
+| research report, due diligence | birdeye-research-assistant |
 `;
 
+  // Inline birdeye-indexer as Shared References (source of truth for all endpoints)
+  const indexerDir = join(LOCAL_SKILLS_DIR, 'birdeye-indexer');
+  const indexerRefsDir = join(indexerDir, 'references');
+  if (existsSync(indexerRefsDir)) {
+    content += `\n\n---\n\n## Shared References (birdeye-indexer)\n\n`;
+    content += `> Canonical endpoint dictionary and shared policies used by all skills below.\n`;
+    for (const file of readdirSync(indexerRefsDir).filter(f => f.endsWith('.md')).sort()) {
+      content += `\n\n### ${file.replace('.md', '')}\n\n${readFileSync(join(indexerRefsDir, file), 'utf-8')}`;
+    }
+    ok('birdeye-indexer (shared references)');
+  }
+
   let installed = 0;
+  // Skip router (routing meta-instructions are noise in a flat file) and indexer (already inlined above)
+  const CODEX_SKIP = new Set(['birdeye-router', 'birdeye-indexer']);
+
   for (const skillName of skillNames) {
+    if (CODEX_SKIP.has(skillName)) continue;
+
     const srcDir = join(LOCAL_SKILLS_DIR, skillName);
     const skillMdPath = join(srcDir, 'SKILL.md');
 
@@ -269,11 +306,11 @@ You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills be
     const raw = readFileSync(skillMdPath, 'utf-8');
     content += `\n\n---\n\n## ${skillName}\n\n${stripFrontmatter(raw)}`;
 
-    // Inline operation-map and caveats
-    for (const ref of ['operation-map', 'caveats']) {
-      const refPath = join(srcDir, 'references', `${ref}.md`);
-      if (existsSync(refPath)) {
-        content += `\n\n### ${ref}\n\n${readFileSync(refPath, 'utf-8')}`;
+    // Inline ALL reference files (not just operation-map + caveats)
+    const refsDir = join(srcDir, 'references');
+    if (existsSync(refsDir)) {
+      for (const file of readdirSync(refsDir).filter(f => f.endsWith('.md')).sort()) {
+        content += `\n\n### ${file.replace('.md', '')}\n\n${readFileSync(join(refsDir, file), 'utf-8')}`;
       }
     }
 
@@ -283,7 +320,8 @@ You are an expert in Birdeye's multi-chain DeFi analytics API. Use the skills be
 
   writeFileSync(outputPath, content);
   console.log(`\n  Generated: ${outputPath}`);
-  return installed;
+  // Count includes CODEX_SKIP skills (router replaced by intent map, indexer inlined as shared refs)
+  return installed + CODEX_SKIP.size;
 }
 
 // ---------------------------------------------------------------------------
@@ -730,8 +768,8 @@ Commands:
     --chatgpt             Alias for --bundle
 
   Skill selection:
-    --all                 Install all 13 skills
-    --domain              Install domain skills only (router + 8)
+    --all                 Install all 14 skills (default when no selection flag given)
+    --domain              Install domain skills only (router + indexer + 8)
     --workflow            Install workflow skills only (4)
     <skill-name>          Install a specific skill
 
@@ -908,7 +946,7 @@ async function main() {
         // Claude
         let c = 0;
         for (const skill of skillsToInstall) {
-          if (installSkillClaude(skill, claudeTarget, 'claude')) c++;
+          if (installSkillClaude(skill, claudeTarget, 'claude', !!projectDir)) c++;
         }
         console.log('');
         c === n ? ok(`Claude  ${c}/${n}`) : warn(`Claude  ${c}/${n}`);
@@ -933,7 +971,7 @@ async function main() {
         switch (platform) {
           case 'claude':
             for (const skill of skillsToInstall) {
-              if (installSkillClaude(skill, targetBase, mode)) installed++;
+              if (installSkillClaude(skill, targetBase, mode, !!projectDir)) installed++;
             }
             break;
           case 'cursor':
@@ -963,10 +1001,12 @@ async function main() {
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-      // Write install timestamp to config
-      const cfg = loadConfig();
-      cfg.installedAt = new Date().toISOString();
-      saveConfig(cfg);
+      // Write install timestamp to config (global installs only — project installs don't touch global state)
+      if (!projectDir) {
+        const cfg = loadConfig();
+        cfg.installedAt = new Date().toISOString();
+        saveConfig(cfg);
+      }
 
       // Set up MCP config for project installs
       let mcpConfigFile = null;
@@ -975,7 +1015,7 @@ async function main() {
         if (platform === 'all' || platform === 'claude') {
           const claudeMcp = projectDir
             ? join(projectDir, '.mcp.json')
-            : join(HOME, '.claude', 'claude_desktop_config.json');
+            : join(HOME, '.claude', 'settings.json');
           setupMcpConfig(claudeMcp, apiKey);
           setupDocsMcp(claudeMcp);
         }
