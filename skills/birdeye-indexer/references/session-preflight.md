@@ -2,6 +2,24 @@
 
 Run these checks before making API calls in a new session.
 
+## How to call the Birdeye API
+
+**Always call the Birdeye REST API directly** using curl or fetch — do NOT route through the official `birdeye-mcp` MCP tool.
+
+The official MCP is just a proxy to the same REST API. Direct calls are faster, have no extra hop, and work even when `mcp.birdeye.so` is unavailable.
+
+```bash
+# Direct API call (preferred)
+curl -sS "https://public-api.birdeye.so/defi/price?address=<TOKEN>" \
+  -H "X-API-KEY: YOUR_KEY" \
+  -H "x-chain: solana" \
+  -H "accept: application/json"
+```
+
+The `birdeye-api-docs` local MCP is useful for dynamic endpoint discovery (listing endpoints, searching params) — use it when you need to look up an endpoint not covered in the skill files.
+
+---
+
 ---
 
 ## 1. Network validation
@@ -116,12 +134,16 @@ If omitted, default behavior is typically `scaled` for display-oriented endpoint
 
 ## 6. Rate limits by tier
 
-| Tier | Requests/sec | Wallet API | WebSocket |
-|---|---|---|---|
-| Standard | 1 rps | 30 rpm | ✗ |
-| Lite/Starter | 15 rps | 30 rpm | ✗ |
-| Premium | 50 rps | 30 rpm | ✗ |
-| Business | 100 rps | 30 rpm | ✓ |
-| Enterprise | Custom | Custom | ✓ |
+| Tier | Global RPS | Wallet endpoints | Scroll endpoint | WebSocket |
+|---|---|---|---|---|
+| Standard | 1 rps | 30 RPS / 150 RPM | 2 RPS | ✗ |
+| Lite/Starter | 15 rps | 30 RPS / 150 RPM | 2 RPS | ✗ |
+| Premium | 50 rps | 30 RPS / 150 RPM | 2 RPS | ✗ |
+| Business | 100 rps | 30 RPS / 150 RPM | 2 RPS | ✓ |
+| Enterprise | Custom | Custom | 2 RPS | ✓ |
 
-**Wallet API** (`/wallet/v2/*`, `/v1/wallet/*`) has a hard **30 RPM** limit on all tiers — sequence these calls.
+**Wallet API** (`/wallet/v2/*`, `/v1/wallet/*`): per-endpoint cap of **30 RPS burst / 150 RPM sustained**, in addition to the tier's global rps. On Standard (1 rps global), the tier limit binds first. On Business+, sequence wallet calls to stay under 150 RPM (≈ 1 call per 400ms).
+
+**Token List Scroll** (`/defi/v3/token/list/scroll`): hard limit of **2 RPS** — add 500ms delay between scroll calls.
+
+Source: https://docs.birdeye.so/docs/per-api-rate-limit

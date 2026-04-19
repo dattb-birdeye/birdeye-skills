@@ -8,7 +8,7 @@
 | `401` | Unauthorized | Missing or invalid `X-API-KEY` | Verify key exists and is in the `X-API-KEY` header (not `Authorization`) |
 | `403` | Forbidden | Feature requires higher plan tier | Upgrade plan — e.g., WebSocket requires Business+ |
 | `404` | Not found | Token/wallet not on this chain, wrong address format | Verify `x-chain` matches the address's chain; check address format |
-| `429` | Rate limited | Exceeded requests/sec or wallet 30 RPM | Apply exponential backoff (see below) |
+| `429` | Rate limited | Exceeded tier global RPS, or wallet 30 RPS / 150 RPM endpoint cap, or scroll 2 RPS | Apply exponential backoff (see below) |
 | `500` | Server error | Transient Birdeye issue | Retry with backoff |
 | `503` | Service unavailable | Maintenance or overload | Retry after delay |
 
@@ -62,17 +62,21 @@ async function fetchWithRetry(
 }
 ```
 
-## Wallet API — 30 RPM sequencing
+## Wallet API — rate limit sequencing
+
+Per-endpoint cap: **30 RPS burst / 150 RPM sustained** (also subject to global tier limit).
 
 ```typescript
-// Birdeye wallet endpoints: 30 RPM = 1 call per 2 seconds to be safe
+// 150 RPM = 1 call per ~400ms sustained. Add buffer:
 async function walletFetch(url: string, headers: HeadersInit): Promise<any> {
   const res = await fetch(url, { headers });
-  await new Promise(r => setTimeout(r, 2100)); // 2.1s between wallet calls
+  await new Promise(r => setTimeout(r, 500)); // safe buffer for 150 RPM cap
   if (!res.ok) throw new Error(`Wallet API error ${res.status}`);
   return res.json();
 }
 ```
+
+Source: https://docs.birdeye.so/docs/per-api-rate-limit
 
 ## Common mistakes and fixes
 
