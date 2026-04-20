@@ -228,6 +228,26 @@ Commands:
   update                Update installed skills to latest version
   check                 Check version and update status
   list                  Show installed skills and versions
+  api <sub>             Call Birdeye API directly
+
+API sub-commands:
+  api price        <token>           Token price
+  api overview     <token>           Full token overview
+  api trending     [--limit N]       Trending tokens
+  api security     <token>           Security analysis
+  api search       <query>           Search tokens by name/symbol
+  api holders      <token>           Top token holders (Solana only)
+  api wallet       <address>         Wallet portfolio (Solana only)
+  api trades       <token>           Recent trades
+  api chart        <token>           OHLCV v3 chart data
+  api chart-pair   <pair>            OHLCV v3 by pair address
+  api history-price <token>          Historical price line
+  api smart-money  [--interval 1d]   Smart money list (Solana only)
+  api gainers      [--type today]    Top PnL gainers
+  api losers       [--type today]    Top PnL losers
+  api top-traders  <token>           Top traders by volume
+
+  Options: --chain  --limit  --interval  --from  --to  --type  --sort-by
 
 Examples:
   npx birdeye-skills install                    # All platforms
@@ -236,6 +256,12 @@ Examples:
   npx birdeye-skills install --bundle           # ChatGPT prompt file
   npx birdeye-skills@latest install             # Update to latest version
   npx birdeye-skills uninstall                  # Remove everything
+  npx birdeye-skills api price So11111111111111111111111111111111111111112
+  npx birdeye-skills api trending --limit 10
+  npx birdeye-skills api chart <token> --interval 4H
+  npx birdeye-skills api smart-money --interval 7d --limit 10
+  npx birdeye-skills api gainers --type today
+  npx birdeye-skills api overview <token> --chain ethereum
 ```
 
 ---

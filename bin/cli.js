@@ -748,6 +748,184 @@ function docsSync() {
 }
 
 // ---------------------------------------------------------------------------
+// API Caller
+// ---------------------------------------------------------------------------
+
+const BIRDEYE_BASE = 'https://public-api.birdeye.so';
+
+function getApiKey() {
+  if (process.env.BIRDEYE_API_KEY) return process.env.BIRDEYE_API_KEY;
+  const settingsPath = join(HOME, '.claude', 'settings.json');
+  if (existsSync(settingsPath)) {
+    try {
+      const s = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+      const h = (s?.mcpServers?.['birdeye-mcp']?.args || []).find(a => a.startsWith('x-api-key:'));
+      if (h) return h.replace('x-api-key:', '');
+    } catch {}
+  }
+  return null;
+}
+
+async function callBirdeye(path, params = {}, chain = 'solana') {
+  const apiKey = getApiKey();
+  if (!apiKey || apiKey === '<YOUR_BIRDEYE_API_KEY>') {
+    console.error('No API key. Run: npx birdeye-skills install --api-key YOUR_KEY');
+    process.exit(1);
+  }
+  const url = new URL(BIRDEYE_BASE + path);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
+  }
+  const res = await fetch(url.toString(), {
+    headers: { 'X-API-KEY': apiKey, 'x-chain': chain, 'accept': 'application/json' },
+  });
+  const json = await res.json();
+  console.log(JSON.stringify(json, null, 2));
+}
+
+function parseApiArgs(args) {
+  const result = { _: null, chain: 'solana' };
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--')) {
+      result[args[i].slice(2)] = args[i + 1] ?? true;
+      i++;
+    } else if (!result._) {
+      result._ = args[i];
+    }
+  }
+  return result;
+}
+
+async function runApiCommand(subArgs) {
+  const sub = subArgs[0];
+  const p = parseApiArgs(subArgs.slice(1));
+  const chain = p.chain || 'solana';
+  const limit = p.limit || '20';
+  const addr = p.token || p.address || p._;
+
+  switch (sub) {
+    case 'price':
+      if (!addr) { console.error('Usage: api price <token_address> [--chain solana]'); process.exit(1); }
+      return callBirdeye('/defi/price', { address: addr, include_liquidity: 'true' }, chain);
+
+    case 'overview':
+      if (!addr) { console.error('Usage: api overview <token_address> [--chain solana]'); process.exit(1); }
+      return callBirdeye('/defi/token_overview', { address: addr }, chain);
+
+    case 'trending':
+      return callBirdeye('/defi/token_trending', { sort_by: 'rank', sort_type: 'asc', offset: '0', limit }, chain);
+
+    case 'security':
+      if (!addr) { console.error('Usage: api security <token_address>'); process.exit(1); }
+      return callBirdeye('/defi/token_security', { address: addr }, chain);
+
+    case 'search': {
+      const query = p.query || p._;
+      if (!query) { console.error('Usage: api search <query> [--chain solana]'); process.exit(1); }
+      return callBirdeye('/defi/v3/search', { keyword: query, target: 'token', chain }, chain);
+    }
+
+    case 'holders':
+      if (!addr) { console.error('Usage: api holders <token_address> [--limit 20]'); process.exit(1); }
+      return callBirdeye('/defi/v3/token/holder', { address: addr, limit }, chain);
+
+    case 'wallet':
+      if (!addr) { console.error('Usage: api wallet <wallet_address> [--chain solana]'); process.exit(1); }
+      return callBirdeye('/v1/wallet/portfolio', { wallet: addr }, chain);
+
+    case 'trades':
+      if (!addr) { console.error('Usage: api trades <token_address> [--limit 20]'); process.exit(1); }
+      return callBirdeye('/defi/txs/token', { address: addr, tx_type: 'all', limit }, chain);
+
+    case 'ohlcv':
+      if (!addr) { console.error('Usage: api ohlcv <token_address> [--interval 1H] [--chain solana]'); process.exit(1); }
+      return callBirdeye('/defi/ohlcv', { address: addr, type: p.interval || '1H', time_from: p.from, time_to: p.to }, chain);
+
+    case 'top-traders':
+      if (!addr) { console.error('Usage: api top-traders <token_address> [--limit 10]'); process.exit(1); }
+      return callBirdeye('/defi/v2/tokens/top_traders', { address: addr, time_frame: p.timeframe || '24h', sort_type: 'desc', sort_by: 'volume', limit }, chain);
+
+    case 'chart': {
+      if (!addr) { console.error('Usage: api chart <token_address> [--interval 1H] [--from <unix>] [--to <unix>] [--chain solana]'); process.exit(1); }
+      const now = Math.floor(Date.now() / 1000);
+      const from = p.from || String(now - 86400);
+      const to = p.to || String(now);
+      return callBirdeye('/defi/v3/ohlcv', { address: addr, type: p.interval || '1H', time_from: from, time_to: to }, chain);
+    }
+
+    case 'chart-pair': {
+      if (!addr) { console.error('Usage: api chart-pair <pair_address> [--interval 1H] [--from <unix>] [--to <unix>] [--chain solana]'); process.exit(1); }
+      const now = Math.floor(Date.now() / 1000);
+      const from = p.from || String(now - 86400);
+      const to = p.to || String(now);
+      return callBirdeye('/defi/v3/ohlcv/pair', { address: addr, type: p.interval || '1H', time_from: from, time_to: to }, chain);
+    }
+
+    case 'history-price': {
+      if (!addr) { console.error('Usage: api history-price <token_address> [--interval 1H] [--from <unix>] [--to <unix>]'); process.exit(1); }
+      const now = Math.floor(Date.now() / 1000);
+      const from = p.from || String(now - 86400);
+      const to = p.to || String(now);
+      return callBirdeye('/defi/history_price', { address: addr, address_type: 'token', type: p.interval || '1H', time_from: from, time_to: to }, chain);
+    }
+
+    case 'smart-money':
+      return callBirdeye('/smart-money/v1/token/list', {
+        sort_by: p['sort-by'] || 'net_flow',
+        sort_type: 'desc',
+        interval: p.interval || '1d',
+        trader_style: p.style || 'all',
+        limit,
+        offset: p.offset || '0',
+      }, 'solana');
+
+    case 'gainers':
+    case 'losers':
+    case 'gainers-losers':
+      return callBirdeye('/trader/gainers-losers', {
+        type: p.type || 'today',
+        sort_by: 'PnL',
+        sort_type: sub === 'losers' ? 'asc' : 'desc',
+        limit,
+        offset: p.offset || '0',
+      }, chain);
+
+    default:
+      console.error(`Unknown api command: ${sub || '(none)'}`);
+      console.log(`
+Commands:
+  api price        <token>           Token price
+  api overview     <token>           Full token overview
+  api trending     [--limit N]       Trending tokens
+  api security     <token>           Security analysis
+  api search       <query>           Search tokens by name/symbol
+  api holders      <token>           Top token holders (Solana only)
+  api wallet       <address>         Wallet portfolio (Solana only)
+  api trades       <token>           Recent trades
+  api ohlcv        <token>           OHLCV candle data (legacy)
+  api chart        <token>           OHLCV v3 chart data
+  api chart-pair   <pair>            OHLCV v3 by pair address
+  api history-price <token>          Historical price line data
+  api smart-money  [--interval 1d]   Smart money token list (Solana only)
+  api gainers      [--type today]    Top gainers by PnL
+  api losers       [--type today]    Top losers by PnL
+  api top-traders  <token>           Top traders by volume
+
+Options:
+  --chain <chain>     Chain (default: solana)
+  --limit <N>         Result limit (default: 20)
+  --interval <tf>     Candle timeframe: 1m 5m 15m 1H 4H 1D 1W (default: 1H)
+  --from <unix>       Start time (unix timestamp)
+  --to <unix>         End time (unix timestamp)
+  --type <period>     gainers/losers period: today yesterday 1W (default: today)
+  --sort-by <field>   smart-money sort: net_flow smart_traders_no market_cap
+  --style <style>     smart-money trader style: all risk_averse trenchers
+      `);
+      process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // CLI Entry Point
 // ---------------------------------------------------------------------------
 
@@ -770,6 +948,26 @@ Other commands:
   update           Update installed skills to latest version
   check            Check version and update status
   list             List installed skills
+  api <sub>        Call Birdeye API directly
+
+API sub-commands:
+  api price        <token>           Token price
+  api overview     <token>           Full token overview
+  api trending     [--limit N]       Trending tokens
+  api security     <token>           Security analysis
+  api search       <query>           Search tokens by name/symbol
+  api holders      <token>           Top token holders (Solana only)
+  api wallet       <address>         Wallet portfolio (Solana only)
+  api trades       <token>           Recent trades
+  api chart        <token>           OHLCV v3 chart data
+  api chart-pair   <pair>            OHLCV v3 by pair address
+  api history-price <token>          Historical price line
+  api smart-money  [--interval 1d]   Smart money list (Solana only)
+  api gainers      [--type today]    Top PnL gainers
+  api losers       [--type today]    Top PnL losers
+  api top-traders  <token>           Top traders by volume
+
+  Options: --chain  --limit  --interval  --from  --to  --type  --sort-by
 
 Examples:
   npx birdeye-skills install                        # All platforms
@@ -777,6 +975,11 @@ Examples:
   npx birdeye-skills install --api-key YOUR_KEY     # With API key
   npx birdeye-skills install --bundle               # ChatGPT prompt file
   npx birdeye-skills uninstall                      # Remove everything
+  npx birdeye-skills api price So11111111111111111111111111111111111111112
+  npx birdeye-skills api trending --limit 10
+  npx birdeye-skills api chart <token> --interval 4H
+  npx birdeye-skills api smart-money --interval 7d
+  npx birdeye-skills api gainers --type today
 `);
 }
 
@@ -1008,6 +1211,10 @@ async function main() {
       } else {
         console.log('Usage: birdeye-skills docs sync');
       }
+      break;
+
+    case 'api':
+      await runApiCommand(args.slice(1));
       break;
 
     case 'cache':
