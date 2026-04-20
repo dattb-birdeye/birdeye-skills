@@ -175,24 +175,23 @@ Tier 3: Workflow Skills (Multi-domain)
 
 ## API Group → Skill Mapping
 
-| API Group | Skill | Endpoints |
-|---|---|---|
-| Price & OHLCV | birdeye-market-data | 12 |
-| Stats | birdeye-market-data | 13 |
-| Alltime & History | birdeye-market-data | 2 |
-| Token/Market List | birdeye-token-discovery | 5 |
-| Creation & Trending | birdeye-token-discovery | 2 |
-| Meme | birdeye-token-discovery | 2 |
-| Search & Utils | birdeye-token-discovery | 2 |
-| Transactions | birdeye-transaction-flow | 10 |
-| Balance & Transfer | birdeye-transaction-flow | 7 |
-| Blockchain | birdeye-transaction-flow | 2 |
-| Wallet, Networth & PnL | birdeye-wallet-intelligence | 14 |
-| Holder | birdeye-holder-analysis | 3 |
-| Security | birdeye-security-analysis | 1 |
-| Smart Money | birdeye-smart-money | 1 |
-| WebSockets | birdeye-realtime-streams | 9 channels |
-| **Total** | | **85+ endpoints** |
+| API Group | Skill |
+|---|---|
+| Price & OHLCV | birdeye-market-data |
+| Stats | birdeye-market-data |
+| Alltime & History | birdeye-market-data |
+| Token/Market List | birdeye-token-discovery |
+| Creation & Trending | birdeye-token-discovery |
+| Meme | birdeye-token-discovery |
+| Search & Utils | birdeye-token-discovery |
+| Transactions | birdeye-transaction-flow |
+| Balance & Transfer | birdeye-transaction-flow |
+| Blockchain | birdeye-transaction-flow |
+| Wallet, Networth & PnL | birdeye-wallet-intelligence |
+| Holder | birdeye-holder-analysis |
+| Security | birdeye-security-analysis |
+| Smart Money | birdeye-smart-money |
+| WebSockets (9 channels) | birdeye-realtime-streams |
 
 ## Supported Chains
 
@@ -310,7 +309,7 @@ birdeye-skills/
 | Business | 100 rps / 1500 rpm | Yes |
 | Enterprise | Custom | Yes |
 
-**Wallet API** (`/wallet/v2/*`, `/v1/wallet/*`): 30 rpm hard limit on all tiers.
+**Wallet API** (`/wallet/v2/*`, `/v1/wallet/*`): 30 RPS burst / 150 RPM sustained, on all tiers.
 
 ---
 
@@ -331,5 +330,3 @@ npm unlink -g birdeye-skills
 ```
 
 Edit files under `skills/` or `bin/cli.js` and re-run commands — no build step needed.
-
-See [`SYSTEM-PROMPTS.md`](./SYSTEM-PROMPTS.md) for detailed integration architecture.
