@@ -1,6 +1,6 @@
 {
   "name": "@birdeye-so/birdeye-skills",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Birdeye DeFi analytics skills for Claude Code, Cursor, Codex CLI, and ChatGPT",
   "type": "module",
   "bin": {
