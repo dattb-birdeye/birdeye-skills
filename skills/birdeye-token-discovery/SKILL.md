@@ -12,6 +12,13 @@ You are an expert at discovering and searching tokens using Birdeye APIs. This s
 
 > `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
+## Use This Skill vs Others
+
+**Find tokens you don't have an address for yet** — search, browse, trending, new listings, meme.
+- vs `birdeye-market-data` → that takes a known address and returns price/stats. Use this skill **first** to resolve symbol/keyword → address.
+- vs `birdeye-token-screener-builder` → that workflow **composes** this skill plus security/smart-money filters. Use the workflow skill when filters span multiple domains.
+- vs `birdeye-smart-money` → that ranks tokens by smart-money flow. Use this skill for generic ranking (volume, liquidity, mcap, price change).
+
 ## Routing
 
 | Intent | Reference |

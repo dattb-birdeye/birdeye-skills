@@ -44,9 +44,11 @@ You are an expert at generating comprehensive research reports and intelligence 
 5. birdeye-security-analysis → GET /defi/token_security (risk assessment)
 6. birdeye-holder-analysis → GET /defi/v3/token/holder (top holders)
 7. birdeye-holder-analysis → GET /holder/v1/distribution (distribution)
-8. birdeye-smart-money → cross-reference with smart money list
-9. birdeye-wallet-intelligence → GET /defi/v2/tokens/top_traders (top traders)
-10. birdeye-market-data → GET /defi/v3/all-time/trades/single (alltime data)
+8. birdeye-holder-analysis → GET /token/v1/holder-profile (bundler/sniper/insider/dev/smart_trader breakdown — Solana, tokens from 2026-03-01 onwards for bundler accuracy)
+9. birdeye-holder-analysis → GET /token/v1/holder/chart (holder count trend over time)
+10. birdeye-smart-money → cross-reference with smart money list
+11. birdeye-wallet-intelligence → GET /defi/v2/tokens/top_traders (top traders)
+12. birdeye-market-data → GET /defi/v3/all-time/trades/single (alltime data)
 ```
 
 ### Output Format
@@ -84,6 +86,8 @@ You are an expert at generating comprehensive research reports and intelligence 
 - **Total Holders**: {holderCount}
 - **Top 10 Concentration**: {top10Pct}%
 - **Distribution Health**: {score}/100
+- **Tag Breakdown** (Solana): bundler {bundlerPct}% · sniper {sniperPct}% · insider {insiderPct}% · dev {devPct}% · smart_trader {smartTraderPct}%
+- **Holder Trend (24h)**: {holderDelta} ({holderDeltaPct}%)
 
 ### Top 5 Holders
 | Rank | Address | Balance | % Supply |

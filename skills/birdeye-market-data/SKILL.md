@@ -12,6 +12,13 @@ You are an expert at querying and composing Birdeye market data APIs. This skill
 
 > `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
+## Use This Skill vs Others
+
+**Quantitative price/volume/stats for a known token or pair.** Input is an address.
+- vs `birdeye-token-discovery` → use that to **find** tokens (search, lists, trending). This skill assumes you already have the address.
+- vs `birdeye-transaction-flow` → use that for **individual trade events**. This skill returns aggregates (OHLCV, volume totals, stats).
+- vs `birdeye-realtime-streams` → use that for **live push** updates. This skill is REST/snapshot.
+
 ## Routing
 
 Read the relevant reference file before implementing:

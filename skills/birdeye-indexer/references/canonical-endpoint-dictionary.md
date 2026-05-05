@@ -182,9 +182,18 @@ curl -sS "https://public-api.birdeye.so/defi/token_security?address=ADDR" \
 | GET | `/defi/v3/token/holder` | var | `address` | `offset`, `limit` | **[SOL]** |
 | GET | `/holder/v1/distribution` | var | `token_address` | `address_type`¹², `mode`¹³, `top_n`, `min_percent`, `max_percent`, `include_list`, `offset`, `limit` | **[SOL]** |
 | POST | `/token/v1/holder/batch` | var/token | body: `list_address` | — | **[SOL]** |
+| GET | `/token/v1/holder-profile` | var | `token_address` | `interval`¹⁴, `ui_amount_mode`, `include_zero_balance` | **[SOL]** |
+| GET | `/token/v1/holder-positions` | var | `token_address` | `labels`¹⁵, `sort_by`¹⁶, `order_type`, `ui_amount_mode`, `include_zero_balance`, `offset`, `limit` | **[SOL]** |
+| GET | `/token/v1/holder/chart` | var | `token_address` | `chart_type`¹⁷, `from`, `to`, `mode`¹⁸, `percent_mode`¹⁹, `count` | **[SOL]** |
 
 **¹²** `address_type` enum: `wallet`, `token_account`  
-**¹³** `mode` enum: `percent`, `top`
+**¹³** `mode` enum: `percent`, `top`  
+**¹⁴** `interval` enum (holder-profile): `1h` (only)  
+**¹⁵** `labels` (holder-positions): comma-separated — `bundler`, `sniper`, `insider`, `dev`, `smart_trader`. Bundler tag accurate for tokens created from 2026-03-01 onwards  
+**¹⁶** `sort_by` (holder-positions) enum: `amount`  
+**¹⁷** `chart_type` enum: `1d`, `1h`, `1m`, `1s` (1s only supports last 3 days)  
+**¹⁸** `mode` (holder/chart) enum: `padding`, `no_fill`  
+**¹⁹** `percent_mode` enum: `beginning`, `previous`
 
 ```bash
 # Top 20 holders

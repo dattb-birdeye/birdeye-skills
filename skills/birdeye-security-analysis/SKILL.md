@@ -12,6 +12,12 @@ You are an expert at evaluating token security using Birdeye APIs. This skill co
 
 > `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
+## Use This Skill vs Others
+
+**Contract-level safety: mint/freeze authority, lock info, transfer fees, audit flags.** One endpoint, one purpose.
+- vs `birdeye-holder-analysis` → that scores **distribution risk** (whale concentration). This skill scores **contract risk** (rug indicators).
+- vs `birdeye-token-discovery` → that finds tokens. Use this skill **after** discovery to filter by safety.
+
 ## Routing
 
 | Intent | Reference |

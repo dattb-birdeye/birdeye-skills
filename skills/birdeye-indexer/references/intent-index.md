@@ -78,6 +78,9 @@ Find your intent below, get the endpoint, then read `canonical-endpoint-dictiona
 | List of top token holders | `GET /defi/v3/token/holder` | var | **SOL** |
 | Holder distribution by balance range | `GET /holder/v1/distribution` | var | **SOL** |
 | Holder data for many tokens (batch) | `POST /token/v1/holder/batch` | var/t | **SOL** |
+| Holder profile summary (bundler/sniper/insider/dev/smart_trader breakdown) | `GET /token/v1/holder-profile` | var | **SOL** |
+| Per-wallet positions filtered by holder labels (PnL, volumes per tag) | `GET /token/v1/holder-positions` | var | **SOL** |
+| Holder count chart over time (1s/1m/1h/1d) | `GET /token/v1/holder/chart` | var | **SOL** |
 
 ---
 
