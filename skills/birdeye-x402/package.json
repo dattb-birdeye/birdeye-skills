@@ -1,0 +1,26 @@
+{
+  "name": "birdeye-x402-skill",
+  "version": "1.0.0",
+  "description": "Birdeye x402 pay-per-request skill — headless client + interactive CLI",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "smoke": "node scripts/smoke-test.mjs",
+    "cli": "node scripts/x402-cli.mjs"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "dependencies": {
+    "@inquirer/confirm": "^5.0.0",
+    "@inquirer/input": "^4.0.0",
+    "@inquirer/search": "^3.0.0",
+    "@scure/base": "^1.1.0",
+    "@solana/kit": "^5.5.1",
+    "@x402/fetch": "^2.9.0",
+    "@x402/svm": "^2.9.0",
+    "dotenv": "^16.0.0",
+    "fuse.js": "^7.0.0"
+  }
+}

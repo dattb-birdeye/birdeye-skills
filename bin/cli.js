@@ -71,6 +71,7 @@ const ALL_SKILLS = [
   'birdeye-token-screener-builder',
   'birdeye-alert-agent',
   'birdeye-research-assistant',
+  'birdeye-x402',
 ];
 
 
@@ -89,6 +90,7 @@ const CURSOR_TRIGGERS = {
   'birdeye-token-screener-builder': 'token screener, trending board, alpha finder, filter tokens',
   'birdeye-alert-agent': 'alert, notification, price alert, whale alert, volume spike, monitor',
   'birdeye-research-assistant': 'research report, token brief, analysis, due diligence, compare tokens',
+  'birdeye-x402': 'pay per request, x402, no API key, USDC payment, micropayment, agent wallet',
 };
 
 // ---------------------------------------------------------------------------
@@ -131,7 +133,7 @@ function loadVersions() {
 // Platform Install: Claude Code
 // ---------------------------------------------------------------------------
 
-function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobalConfig = false) {
+function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobalConfig = false, platform = 'claude') {
   const srcDir = join(LOCAL_SKILLS_DIR, skillName);
   const skillMdPath = join(srcDir, 'SKILL.md');
 
@@ -143,11 +145,37 @@ function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobal
   const target = join(targetBase, skillName);
   mkdirSync(target, { recursive: true });
 
-  cpSync(skillMdPath, join(target, 'SKILL.md'));
+  // Rewrite <skill-dir> placeholder to the absolute install path so the agent
+  // never has to guess. Different platforms anchor to different roots.
+  const platformRoot = platform === 'codex' ? '~/.codex/skills' : '~/.claude/skills';
+  const absSkillDir = `${platformRoot}/${skillName}`;
+  const rewrite = (s) => s.replace(/<skill-dir>/g, absSkillDir);
+
+  writeFileSync(join(target, 'SKILL.md'), rewrite(readFileSync(skillMdPath, 'utf-8')));
 
   const refsDir = join(srcDir, 'references');
   if (existsSync(refsDir)) {
-    cpSync(refsDir, join(target, 'references'), { recursive: true });
+    mkdirSync(join(target, 'references'), { recursive: true });
+    for (const file of readdirSync(refsDir)) {
+      const src = join(refsDir, file);
+      const dst = join(target, 'references', file);
+      if (file.endsWith('.md')) {
+        writeFileSync(dst, rewrite(readFileSync(src, 'utf-8')));
+      } else {
+        cpSync(src, dst, { recursive: true });
+      }
+    }
+  }
+
+  // Optional skill assets — scripts, runtime package.json, env template.
+  // Skills like birdeye-x402 ship executable signer/payment scripts that the
+  // agent needs to run; copy them along with SKILL.md so the install is usable.
+  const optionalAssets = ['scripts', 'package.json', '.env.example', '.gitignore'];
+  for (const asset of optionalAssets) {
+    const srcPath = join(srcDir, asset);
+    if (existsSync(srcPath)) {
+      cpSync(srcPath, join(target, asset), { recursive: true });
+    }
   }
 
   // Write install metadata
@@ -157,7 +185,7 @@ function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobal
     version: versions[skillName] || '1.0.0',
     installedAt: new Date().toISOString(),
     source: 'local',
-    platform: 'claude',
+    platform,
   };
   writeFileSync(join(target, '.birdeye-meta.json'), JSON.stringify(meta, null, 2));
 
@@ -165,12 +193,12 @@ function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobal
   if (!skipGlobalConfig) {
     const config = loadConfig();
     config.installed = config.installed || {};
-    config.installed[skillName] = {
+    config.installed[`${platform}:${skillName}`] = {
       version: meta.version,
       installedAt: meta.installedAt,
       path: target,
       mode,
-      platform: 'claude',
+      platform,
     };
     saveConfig(config);
   }
@@ -183,7 +211,13 @@ function installSkillClaude(skillName, targetBase, mode = 'personal', skipGlobal
 // Platform Install: Cursor (.mdc rules)
 // ---------------------------------------------------------------------------
 
-function installSkillCursor(skillName, targetBase) {
+// Cursor's standard global skills dir per cursor.com/docs/skills. Cursor
+// auto-discovers any SKILL.md under here recursively. We install the full
+// skill layout natively, and also emit a legacy .mdc rule into
+// ~/.cursor/rules/ for older Cursor versions that only support rules.
+const CURSOR_SKILLS_DIR = join(HOME, '.cursor', 'skills');
+
+function installSkillCursor(skillName, rulesBase) {
   const srcDir = join(LOCAL_SKILLS_DIR, skillName);
   const skillMdPath = join(srcDir, 'SKILL.md');
 
@@ -192,29 +226,35 @@ function installSkillCursor(skillName, targetBase) {
     return false;
   }
 
-  mkdirSync(targetBase, { recursive: true });
+  // 1) Native install — full skill dir at ~/.cursor/skills/<name>/.
+  installSkillClaude(skillName, CURSOR_SKILLS_DIR, 'personal', false, 'cursor');
+
+  // 2) Legacy .mdc rule fallback at ~/.cursor/rules/<name>.mdc.
+  mkdirSync(rulesBase, { recursive: true });
+
+  const cursorSkillDir = `~/.cursor/skills/${skillName}`;
+  const rewrite = (s) => s
+    .replace(/<skill-dir>/g, cursorSkillDir)
+    .replace(/~\/\.claude\/skills\/([a-z0-9-]+)/g, `~/.cursor/skills/$1`);
 
   const content = readFileSync(skillMdPath, 'utf-8');
   const description = CURSOR_TRIGGERS[skillName] || extractDescription(content);
   const alwaysApply = skillName === 'birdeye-router' ? 'true' : 'false';
-  const body = stripFrontmatter(content);
+  const body = rewrite(stripFrontmatter(content));
 
-  // Build .mdc content
   let mdc = `---\ndescription: ${description}\nglobs: \nalwaysApply: ${alwaysApply}\n---\n\n${body}`;
 
-  // Inline references
   const refsDir = join(srcDir, 'references');
   if (existsSync(refsDir)) {
     mdc += '\n\n---\n\n## References\n';
     for (const file of readdirSync(refsDir).filter(f => f.endsWith('.md'))) {
-      const refContent = readFileSync(join(refsDir, file), 'utf-8');
+      const refContent = rewrite(readFileSync(join(refsDir, file), 'utf-8'));
       const refName = file.replace('.md', '');
       mdc += `\n### ${refName}\n\n${refContent}\n`;
     }
   }
 
-  writeFileSync(join(targetBase, `${skillName}.mdc`), mdc);
-  ok(`${skillName} → ${skillName}.mdc`);
+  writeFileSync(join(rulesBase, `${skillName}.mdc`), mdc);
   return true;
 }
 
@@ -236,6 +276,8 @@ function installSkillsCodex(skillNames, targetBase) {
   let content = `# Birdeye DeFi Analytics Agent
 
 You are an expert in Birdeye's multi-chain DeFi analytics API. All domain skills are bundled in this file — use the relevant section directly without routing or delegation.
+
+> **Codex CLI runtime paths**: Skill scripts and \`.env\` files for any skill referenced below live in \`~/.codex/skills/<skill-name>/\`. When a section says "this skill's directory" or shows \`<skill-dir>\`, resolve it to \`~/.codex/skills/<skill-name>/\` — never \`~/.claude/skills/...\` (that's for Claude Code). Write \`.env\` and run scripts only inside \`~/.codex/skills/\`.
 
 ## Prerequisites
 
@@ -302,13 +344,23 @@ You are an expert in Birdeye's multi-chain DeFi analytics API. All domain skills
     }
 
     const raw = readFileSync(skillMdPath, 'utf-8');
-    content += `\n\n---\n\n## ${skillName}\n\n${stripFrontmatter(raw)}`;
+    // Rewrite skill-dir placeholders + Claude paths so a Codex agent reading
+    // this never falls back to ~/.claude/skills/... when both platforms are
+    // installed side by side.
+    const codexSkillDir = `~/.codex/skills/${skillName}`;
+    const body = stripFrontmatter(raw)
+      .replace(/<skill-dir>/g, codexSkillDir)
+      .replace(/~\/\.claude\/skills\/([a-z0-9-]+)/g, '~/.codex/skills/$1');
+    content += `\n\n---\n\n## ${skillName}\n\n${body}`;
 
     // Inline ALL reference files (not just operation-map + caveats)
     const refsDir = join(srcDir, 'references');
     if (existsSync(refsDir)) {
       for (const file of readdirSync(refsDir).filter(f => f.endsWith('.md')).sort()) {
-        content += `\n\n### ${file.replace('.md', '')}\n\n${readFileSync(join(refsDir, file), 'utf-8')}`;
+        const refRaw = readFileSync(join(refsDir, file), 'utf-8')
+          .replace(/<skill-dir>/g, codexSkillDir)
+          .replace(/~\/\.claude\/skills\/([a-z0-9-]+)/g, '~/.codex/skills/$1');
+        content += `\n\n### ${file.replace('.md', '')}\n\n${refRaw}`;
       }
     }
 
@@ -561,19 +613,24 @@ function uninstall() {
 
   let removed = 0;
 
-  // 1. Claude Code skills (~/.claude/skills/birdeye-*)
-  if (existsSync(CLAUDE_SKILLS_DIR)) {
-    for (const entry of readdirSync(CLAUDE_SKILLS_DIR)) {
+  // Native skill directories — same layout for Claude, Codex, Cursor.
+  const skillDirs = [
+    { label: 'Claude', dir: CLAUDE_SKILLS_DIR },
+    { label: 'Codex',  dir: join(CODEX_DIR, 'skills') },
+    { label: 'Cursor', dir: CURSOR_SKILLS_DIR },
+  ];
+  for (const { label, dir } of skillDirs) {
+    if (!existsSync(dir)) continue;
+    for (const entry of readdirSync(dir)) {
       if (entry.startsWith('birdeye-')) {
-        const target = join(CLAUDE_SKILLS_DIR, entry);
-        rmSync(target, { recursive: true, force: true });
-        ok(`Removed Claude skill: ${entry}`);
+        rmSync(join(dir, entry), { recursive: true, force: true });
+        ok(`Removed ${label} skill: ${entry}`);
         removed++;
       }
     }
   }
 
-  // 2. Cursor rules (~/.cursor/rules/birdeye-*.mdc)
+  // Cursor legacy .mdc rules
   if (existsSync(CURSOR_RULES_DIR)) {
     for (const entry of readdirSync(CURSOR_RULES_DIR)) {
       if (entry.startsWith('birdeye-') && entry.endsWith('.mdc')) {
@@ -584,7 +641,7 @@ function uninstall() {
     }
   }
 
-  // 3. Codex AGENTS files (~/.codex/AGENTS.md or AGENTS-birdeye.md)
+  // Codex AGENTS.md fallback files
   for (const file of ['AGENTS.md', 'AGENTS-birdeye.md']) {
     const target = join(CODEX_DIR, file);
     if (existsSync(target)) {
@@ -592,6 +649,18 @@ function uninstall() {
       if (content.includes('Birdeye')) {
         rmSync(target, { force: true });
         ok(`Removed Codex file: ${target}`);
+        removed++;
+      }
+    }
+  }
+
+  // Legacy ~/.birdeye/skills/ from older versions (pre-cursor-skills-dir).
+  const legacyBirdeyeDir = join(HOME, '.birdeye', 'skills');
+  if (existsSync(legacyBirdeyeDir)) {
+    for (const entry of readdirSync(legacyBirdeyeDir)) {
+      if (entry.startsWith('birdeye-')) {
+        rmSync(join(legacyBirdeyeDir, entry), { recursive: true, force: true });
+        ok(`Removed legacy: ~/.birdeye/skills/${entry}`);
         removed++;
       }
     }
@@ -1072,13 +1141,19 @@ async function main() {
         console.log('');
         cu === n ? ok(`Cursor  ${cu}/${n}`) : warn(`Cursor  ${cu}/${n}`);
 
-        // Codex
+        // Codex — install both as skills/ directory AND AGENTS.md fallback
+        let cxd = 0;
+        const codexSkillsDir = join(CODEX_DIR, 'skills');
         console.log('');
+        for (const skill of skillsToInstall) {
+          if (installSkillClaude(skill, codexSkillsDir, mode, false, 'codex')) cxd++;
+        }
         const cx = installSkillsCodex(skillsToInstall, codexTarget);
         console.log('');
-        cx > 0 ? ok(`Codex   ${cx}/${n} → AGENTS.md`) : warn(`Codex   failed`);
+        cxd === n ? ok(`Codex   ${cxd}/${n} → ~/.codex/skills/`) : warn(`Codex   ${cxd}/${n}`);
+        cx > 0 ? ok(`Codex   AGENTS.md generated`) : warn(`Codex   AGENTS.md failed`);
 
-        installed = c + cu + (cx ? 1 : 0);
+        installed = c + cu + cxd + (cx ? 1 : 0);
       } else {
         switch (platform) {
           case 'claude':
@@ -1091,9 +1166,14 @@ async function main() {
               if (installSkillCursor(skill, cursorTarget)) installed++;
             }
             break;
-          case 'codex':
-            installed = installSkillsCodex(skillsToInstall, codexTarget);
+          case 'codex': {
+            const codexSkillsDir = join(CODEX_DIR, 'skills');
+            for (const skill of skillsToInstall) {
+              if (installSkillClaude(skill, codexSkillsDir, mode, false, 'codex')) installed++;
+            }
+            installSkillsCodex(skillsToInstall, codexTarget);
             break;
+          }
           case 'bundle':
             installed = installSkillsBundle(skillsToInstall, bundleOutput);
             break;

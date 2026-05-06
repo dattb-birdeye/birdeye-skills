@@ -1,0 +1,360 @@
+[
+  { "method": "GET", "path": "/x402/defi/price", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "check_liquidity", "in": "query", "required": false },
+    { "name": "include_liquidity", "in": "query", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/history_price", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "address_type", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "time_from", "in": "query", "required": true },
+    { "name": "time_to", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/historical_price_unix", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "unixtime", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/txs/token", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/txs/pair", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/txs/token/seek_by_time", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/txs/pair/seek_by_time", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/ohlcv", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "currency", "in": "query", "required": false },
+    { "name": "time_from", "in": "query", "required": true },
+    { "name": "time_to", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/ohlcv/pair", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "time_from", "in": "query", "required": true },
+    { "name": "time_to", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/ohlcv/base_quote", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "base_address", "in": "query", "required": true },
+    { "name": "quote_address", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "time_from", "in": "query", "required": true },
+    { "name": "time_to", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/tokenlist", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "min_liquidity", "in": "query", "required": false },
+    { "name": "max_liquidity", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/token_trending", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "interval", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/token_creation_info", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/token_security", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/token_overview", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "frames", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/price_volume/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v2/tokens/new_listing", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "time_to", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "meme_platform_enabled", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v2/tokens/top_traders", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "time_frame", "in": "query", "required": true },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v2/markets", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "time_frame", "in": "query", "required": true },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/meta-data/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/pair/overview/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/market-data", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/trade-data/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "frames", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/holder", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/search", "params": [
+    { "name": "chain", "in": "query", "required": false },
+    { "name": "keyword", "in": "query", "required": false },
+    { "name": "target", "in": "query", "required": false },
+    { "name": "search_mode", "in": "query", "required": false },
+    { "name": "search_by", "in": "query", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "verify_token", "in": "query", "required": false },
+    { "name": "markets", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/mint-burn-txs", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/list", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/all-time/trades/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "time_frame", "in": "query", "required": true },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/txs/recent", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "owner", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "before_block_number", "in": "query", "required": false },
+    { "name": "after_block_number", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/txs", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "source", "in": "query", "required": false },
+    { "name": "owner", "in": "query", "required": false },
+    { "name": "pool_id", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "before_block_number", "in": "query", "required": false },
+    { "name": "after_block_number", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/txs", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "source", "in": "query", "required": false },
+    { "name": "owner", "in": "query", "required": false },
+    { "name": "pool_id", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "before_block_number", "in": "query", "required": false },
+    { "name": "after_block_number", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/txs/latest-block", "params": [
+    { "name": "x-chain", "in": "header", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/exit-liquidity", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/meme/list", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "source", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/meme/detail/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/token/txs-by-volume", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "token_address", "in": "query", "required": true },
+    { "name": "volume_type", "in": "query", "required": true },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/ohlcv", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "currency", "in": "query", "required": false },
+    { "name": "time_from", "in": "query", "required": true },
+    { "name": "time_to", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/ohlcv/pair", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "time_from", "in": "query", "required": true },
+    { "name": "time_to", "in": "query", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/defi/v3/price/stats/single", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "list_timeframe", "in": "query", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/trader/gainers-losers", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "type", "in": "query", "required": true },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/trader/txs/seek_by_time", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "address", "in": "query", "required": true },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false },
+    { "name": "tx_type", "in": "query", "required": false },
+    { "name": "before_time", "in": "query", "required": false },
+    { "name": "after_time", "in": "query", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false }
+  ]},
+  { "method": "GET", "path": "/x402/smart-money/v1/token/list", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "interval", "in": "query", "required": false },
+    { "name": "trader_style", "in": "query", "required": false },
+    { "name": "sort_by", "in": "query", "required": false },
+    { "name": "sort_type", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false }
+  ]},
+  { "method": "POST", "path": "/x402/token/v1/holder/batch", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "ui_amount_mode", "in": "query", "required": false },
+    { "name": "body", "in": "body", "required": true }
+  ]},
+  { "method": "POST", "path": "/x402/token/v1/transfer", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "body", "in": "body", "required": true }
+  ]},
+  { "method": "POST", "path": "/x402/token/v1/transfer/total", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "body", "in": "body", "required": true }
+  ]},
+  { "method": "GET", "path": "/x402/holder/v1/distribution", "params": [
+    { "name": "x-chain", "in": "header", "required": false },
+    { "name": "token_address", "in": "query", "required": true },
+    { "name": "address_type", "in": "query", "required": false },
+    { "name": "mode", "in": "query", "required": false },
+    { "name": "offset", "in": "query", "required": false },
+    { "name": "limit", "in": "query", "required": false }
+  ]}
+]

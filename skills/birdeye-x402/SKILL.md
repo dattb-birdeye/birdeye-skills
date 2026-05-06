@@ -1,63 +1,75 @@
 ---
 name: birdeye-x402
-description: Pay-per-request Birdeye API access via x402 protocol — no API key needed. Agent pays USDC on Solana per call using withPaymentInterceptor. Use when agent has a Solana wallet but no BIRDEYE_API_KEY.
+description: Pay-per-request Birdeye API via x402 (USDC on Solana, no API key). Ships an end-to-end signer + payment flow as runnable scripts so the agent never wires up keypairs itself.
 metadata:
   author: Birdeye Partners
-  version: "1.0.0"
+  version: "2.1.0"
 ---
 
-# Birdeye x402 — Pay-Per-Request
+# Birdeye x402
 
-Query Birdeye without an API key. Agent pays USDC on Solana per request via the x402 protocol.
+Use **only when** `BIRDEYE_API_KEY` is missing. Wallet endpoints + WebSocket are not supported via x402 — fall back to standard API.
 
-> No `X-API-KEY` required | Base: `https://public-api.birdeye.so/x402` | Currency: **USDC on Solana mainnet** | Facilitator: Coinbase CDP
+Base: `https://public-api.birdeye.so` · Path prefix: `/x402` · Pay: USDC on Solana mainnet.
 
-## When to use this skill
+**Requires Node.js ≥ 20**. `@solana/kit` upstream recommends ≥ 20.18 (engines field), but Node 20.0–20.17 works in practice — `setup.sh` warns but proceeds. Hard-fails on Node < 20 because Web Crypto Ed25519 isn't available.
 
-Use x402 **only when `BIRDEYE_API_KEY` is not available** and the agent holds a Solana keypair with USDC.
+## Setup — ask user once, then automate
 
-| Condition | Use |
-|---|---|
-| `BIRDEYE_API_KEY` is set | Standard API — use other birdeye skills instead |
-| No API key, agent has Solana wallet + USDC | **This skill — x402** |
-| Need bulk/batch endpoints (POST multi-price, pair overview multiple) | Standard API only — x402 does not support |
-| Need wallet endpoints (`/wallet/v2/*`, `/v1/wallet/*`) | Standard API only |
-| Need WebSocket streams | Standard API only |
+Run setup from this skill's directory (`<skill-dir>`). The installer rewrites `<skill-dir>` to the absolute path for your platform.
 
-## Routing
-
-| Intent | Reference |
-|---|---|
-| Which endpoints are available via x402 | `references/operation-map.md` |
-| Pick the right endpoint for your intent | `references/endpoint-playbook.md` |
-| Copy-paste curl / TypeScript templates | `references/request-templates.md` |
-| Gotchas, USDC requirements, error patterns | `references/caveats.md` |
-
-## Setup (one-time)
+Setup is split into **3 steps** so the agent can request the right sandbox permission for each — `deps` and `smoke` need network; `env` does not.
 
 ```bash
-npm install @x402/fetch @solana/web3.js
+cd <skill-dir>
+bash scripts/setup.sh           # try all → returns one of:
+# 0 = ready
+# 3 = deps missing → run `bash scripts/setup.sh deps` (NEEDS NETWORK to npm registry)
+# 2 = need PRIVATE_KEY → ask user ONE question, then `bash scripts/setup.sh env <KEY>`
+# 1 = real failure → show stderr
 ```
 
-```typescript
-import { withPaymentInterceptor } from '@x402/fetch';
-import { Keypair } from '@solana/web3.js';
+Step-by-step (use these when sandbox restricts network):
 
-const keypair = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(process.env.SOLANA_PRIVATE_KEY!))
-);
-
-// Wrap fetch once — handles 402 → sign USDC → retry automatically
-const fetch402 = withPaymentInterceptor(globalThis.fetch, { wallet: keypair });
+```bash
+bash scripts/setup.sh deps             # npm install — approve network to registry.npmjs.org
+bash scripts/setup.sh env <base58>     # write .env (no network)
+bash scripts/setup.sh smoke            # 1 paid Birdeye call — approve network to public-api.birdeye.so
 ```
 
-## Path rule
+`npm install` runs with `--prefer-offline --no-audit --no-fund --progress=false` so it fails fast on blocked network instead of hanging.
 
-Prepend `/x402` to any supported path. All query params stay identical. Drop `X-API-KEY`.
+When exit 2, ask the user **one** question (no multi-choice menus):
 
+> "Paste a base58 Solana private key (Phantom/Solflare export) holding USDC on Solana mainnet. I'll wire it up."
+
+Then re-run with the key inline (never echo it back). Stay in the skill directory:
+
+```bash
+PRIVATE_KEY='<paste>' bash scripts/setup.sh
 ```
-Standard:  GET https://public-api.birdeye.so/defi/price?address=So111...
-x402:      GET https://public-api.birdeye.so/x402/defi/price?address=So111...
+
+`.env` persists (mode 600). Don't ask again on later sessions. Re-runs of `setup.sh` skip the paid smoke test unless `SMOKE=1` is set or a new key is passed — no surprise charges. The client auto-loads `.env`, so agents can `import` it from any cwd.
+
+## Use the client
+
+Headless (default — no human in the loop):
+
+```js
+import { createPaidFetch, x402Get, x402Post } from './scripts/x402-client.mjs';
+const { paidFetch } = await createPaidFetch();
+const data = await x402Get(paidFetch, '/defi/price', { address: 'So11111111111111111111111111111111111111112' });
 ```
 
-`User-Agent` header is **not required** for x402 — the payment signature authenticates the request.
+Interactive verify (user confirms each payment in terminal): `npm run cli`
+
+## Routing — load references ONLY when needed
+
+| Need | File | When to read |
+|---|---|---|
+| Pick endpoint for an intent | `references/endpoint-playbook.md` | User asks something not in the example above |
+| Copy-paste templates | `references/request-templates.md` | Need a non-trivial endpoint shape |
+| Full path/param list | `references/operation-map.md` | Verifying a specific path or param |
+| Errors / Birdeye quirks | `references/caveats.md` | Smoke test fails, or 4xx response |
+
+**Do NOT read** `scripts/x402-client.mjs`, `scripts/x402-cli.mjs`, or `scripts/endpoints.json` unless modifying the client. They are runtime code — import/exec, don't paste into context.
