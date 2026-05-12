@@ -12,6 +12,13 @@ You are an expert at tracking smart money activity using Birdeye APIs. This skil
 
 > `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
+## Use This Skill vs Others
+
+**Tokens that the curated smart-money cohort is buying/selling, ranked by net flow.** Output is a token leaderboard.
+- vs `birdeye-wallet-intelligence` → that analyzes **a specific wallet** (PnL, portfolio). This skill works at the cohort level — there's no "is wallet X smart money?" endpoint; cross-reference holdings instead.
+- vs `birdeye-holder-analysis` → that segments **holders of one token**. Note `holder-positions?labels=smart_trader` returns smart-trader wallets for a single token; this skill returns tokens across the whole cohort.
+- vs `birdeye-token-discovery` → use this when ranking criterion is **smart money flow**, not generic volume/liquidity.
+
 ## Routing
 
 | Intent | Reference |

@@ -64,9 +64,20 @@ Use this guide to pick the right endpoint. All paths prefixed with `/x402`.
 - **"Who made the most profit?"** → `/x402/trader/gainers-losers?type=today`
 - **"I need wallet data"** → x402 does NOT support wallet endpoints — use standard API key
 
+## Transactions & Transfers (POST)
+
+| Intent | Endpoint | Notes |
+|---|---|---|
+| Token transactions (token-centric) | `GET /x402/defi/v3/token/txs` | Use sort_by/sort_type to order |
+| Token transactions by volume | `GET /x402/defi/v3/token/txs-by-volume` | Param: `token_address`, `volume_type` |
+| Mint / burn events | `GET /x402/defi/v3/token/mint-burn-txs` | `type` required |
+| Recent global trades | `GET /x402/defi/v3/txs/recent` | — |
+| Batch holder counts | `POST /x402/token/v1/holder/batch` | JSON body |
+| Token transfer history | `POST /x402/token/v1/transfer` | JSON body |
+| Aggregate transfer totals | `POST /x402/token/v1/transfer/total` | JSON body |
+
 ## Not available via x402 — fall back to standard API
 
 - All `/wallet/v2/*` and `/v1/wallet/*` endpoints
-- POST bulk endpoints (`/defi/v3/token/meta-data/multiple`, `/defi/v3/pair/overview/multiple`, etc.)
 - WebSocket streams
 - Non-Solana chains for holder/smart-money endpoints

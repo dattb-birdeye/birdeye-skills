@@ -730,14 +730,53 @@ PYEOF
   print_ok "API key saved → $config_file"
 }
 
+# Return 0 if config_file already has a real (non-placeholder) Birdeye API key.
+_has_existing_key() {
+  local config_file="$1"
+  local config_type="$2"
+  [[ -f "$config_file" ]] || return 1
+  case "$config_type" in
+    json)
+      python3 - "$config_file" << 'PYEOF' 2>/dev/null
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+srv = (cfg.get("mcpServers") or {}).get("birdeye-mcp") or {}
+key = (srv.get("env") or {}).get("API_KEY", "")
+if not key:
+    for a in srv.get("args", []):
+        if isinstance(a, str) and a.startswith("x-api-key:"):
+            key = a.split(":", 1)[1]; break
+sys.exit(0 if key and key != "<YOUR_BIRDEYE_API_KEY>" else 1)
+PYEOF
+      ;;
+    toml)
+      grep -q "x-api-key:" "$config_file" && ! grep -q "<YOUR_BIRDEYE_API_KEY>" "$config_file"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 # Prompt user to enter API key interactively, or show manual instructions
 prompt_api_key() {
   local config_file="$1"
   local config_type="$2"   # json | toml | personal-claude | bundle
 
+  # Skip entirely when a key is already configured
+  if _has_existing_key "$config_file" "$config_type"; then
+    echo ""
+    print_ok "API key already configured → $config_file (skipping setup)"
+    return
+  fi
+
   echo ""
   print_warn "${C_BOLD}Birdeye API key not configured${C_NC}"
   echo "       Get your key: https://bds.birdeye.so → Usages → Security → Generate key"
+  echo "       Or auto-generate via CLI: ${C_DIM}birdeye-skills login && birdeye-skills gen-token --save${C_NC}"
   echo ""
 
   # Interactive prompt only when stdin & stdout are both TTYs and a config file exists
@@ -758,6 +797,11 @@ prompt_api_key() {
 
   # Manual instructions
   print_info "To set your API key later:"
+  echo -e "       ${C_DIM}# Option A — paste an existing key${C_NC}"
+  echo -e "       ${C_DIM}birdeye-skills install --api-key YOUR_KEY${C_NC}"
+  echo -e "       ${C_DIM}# Option B — log in and auto-generate one${C_NC}"
+  echo -e "       ${C_DIM}birdeye-skills login && birdeye-skills gen-token --save${C_NC}"
+  echo ""
   case "$config_type" in
     json)
       echo -e "       File: ${C_BOLD}$config_file${C_NC}"

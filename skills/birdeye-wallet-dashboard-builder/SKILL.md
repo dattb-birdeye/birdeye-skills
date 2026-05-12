@@ -50,6 +50,8 @@ For each significant token in the portfolio:
 ```
 birdeye-market-data → GET /defi/price (current prices)
 birdeye-holder-analysis → GET /defi/v3/token/holder (list all holders; scan to check wallet's position)
+birdeye-holder-analysis → GET /token/v1/holder/chart (Solana — holder count trend; flag if base growing/shrinking around wallet's entry)
+birdeye-holder-analysis → GET /token/v1/holder-positions?labels=smart_trader,insider (Solana — see if wallet shares position with tagged cohorts)
 birdeye-security-analysis → GET /defi/token_security (risk check)
 ```
 

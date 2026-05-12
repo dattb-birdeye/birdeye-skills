@@ -68,9 +68,30 @@ console.log(h ? h.replace('x-api-key:','') : 'NOT FOUND');
 "
 ```
 
-If not found: ask the user to run `npx birdeye-skills install --api-key YOUR_KEY` (get key at https://bds.birdeye.so).
+### If no key is found
 
-**Do NOT stop the task** — proceed with the key you found, or ask the user once and continue.
+Offer the user these options (in order of preference) and **wait for a choice** — do not silently stop:
+
+> Use `birdeye-skills <cmd>` if installed globally (`npm i -g birdeye-skills`), otherwise `npx birdeye-skills <cmd>`. Both forms work identically.
+
+1. **Paste an existing key** — they grab one at https://bds.birdeye.so → Usages → Security → Generate key, then you run:
+   ```bash
+   birdeye-skills install --api-key YOUR_KEY        # or: npx birdeye-skills install --api-key YOUR_KEY
+   ```
+
+2. **Generate a key via CLI login** — fully automated, no browser needed. With user consent (they will type their Birdeye password into the prompt), run:
+   ```bash
+   birdeye-skills login              # prompts email + password, saves session to ~/.birdeye/auth.json
+   birdeye-skills gen-token --save   # creates an api-key, writes it into ~/.claude/settings.json + ~/.cursor/mcp.json
+   ```
+   (Prefix with `npx ` if not installed globally.)
+   After `gen-token --save` completes, re-read the key from `~/.claude/settings.json` using the snippet above and continue.
+
+   ⚠️ **Never type the password on behalf of the user.** Print the two commands and let the user execute them in their terminal (or paste via `! <command>` in Claude Code) so the password is entered by them.
+
+3. **Skip API key — use x402 pay-per-request instead** — if the user does not want to create an account, delegate the request to the **birdeye-x402** skill which pays per call in USDC on Solana (no API key required). Only suitable for ad-hoc queries, not bulk workflows.
+
+**Do NOT stop the task** — pick one path with the user and proceed.
 
 ## 3. Auth headers
 

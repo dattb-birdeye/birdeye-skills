@@ -3,3 +3,8 @@ birdeye-system-prompt.md
 *.log
 .DS_Store
 .claude-plugin
+
+# Per-skill runtime artifacts (skills install their own deps via scripts/setup.sh)
+skills/**/node_modules/
+skills/**/.env
+skills/**/package-lock.json

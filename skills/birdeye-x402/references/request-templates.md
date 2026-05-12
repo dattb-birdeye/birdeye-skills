@@ -1,161 +1,155 @@
 # x402 — Request Templates
 
-Base URL: `https://public-api.birdeye.so/x402`
-Required headers: `x-chain: solana` | `accept: application/json`
-No `X-API-KEY` — payment via USDC on Solana.
+All examples assume the headless client from `scripts/x402-client.mjs`.
 
-**Setup** (run once per process):
-
-```typescript
-import { withPaymentInterceptor } from '@x402/fetch';
-import { Keypair } from '@solana/web3.js';
-
-const keypair = Keypair.fromSecretKey(
-  Uint8Array.from(JSON.parse(process.env.SOLANA_PRIVATE_KEY!))
-);
-const fetch402 = withPaymentInterceptor(globalThis.fetch, { wallet: keypair });
+```js
+import { createPaidFetch, x402Get, x402Post } from '../scripts/x402-client.mjs';
+const { paidFetch } = await createPaidFetch();
 ```
+
+`PRIVATE_KEY` env var must be set to a base58 Solana private key.
+The client adds `x-chain: solana` and the Birdeye `payment-identifier` extension automatically.
 
 ---
 
 ## 1) Token price
 
-```typescript
-const res  = await fetch402(
-  'https://public-api.birdeye.so/x402/defi/price?address=So11111111111111111111111111111111111111112',
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json = await res.json() as any;
-const price = json.data.value;  // number
+```js
+const data = await x402Get(paidFetch, '/defi/price', {
+  address: 'So11111111111111111111111111111111111111112',
+});
+const price = data.value;
 ```
 
 ---
 
-## 2) Multi-token price (GET, up to ~20 addresses)
+## 2) Token overview (fundamentals)
 
-```typescript
-const addresses = [
-  'So11111111111111111111111111111111111111112',
-  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-].join(',');
-
-const res  = await fetch402(
-  `https://public-api.birdeye.so/x402/defi/multi_price?list_address=${addresses}`,
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json = await res.json() as any;
-// json.data['So111...'].value, json.data['EPjF...'].value
+```js
+const data = await x402Get(paidFetch, '/defi/token_overview', { address: tokenAddress });
+const { price, marketCap, fdv, liquidity, volume24h, holder, priceChange24hPercent } = data;
 ```
 
 ---
 
-## 3) Token overview (fundamentals)
+## 3) Token security check
 
-```typescript
-const res  = await fetch402(
-  `https://public-api.birdeye.so/x402/defi/token_overview?address=${tokenAddress}`,
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json = await res.json() as any;
-const { marketCap, volume24h, holder, priceChange24hPercent } = json.data;
-```
-
----
-
-## 4) Token security check
-
-```typescript
-const res  = await fetch402(
-  `https://public-api.birdeye.so/x402/defi/token_security?address=${tokenAddress}`,
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json = await res.json() as any;
-const sec  = json.data;
-
+```js
+const sec = await x402Get(paidFetch, '/defi/token_security', { address: tokenAddress });
 const isHighRisk = sec.mintable || sec.freezeable || sec.creatorPercentage > 0.20;
 const isMedRisk  = sec.top10HolderPercent > 0.50;
 ```
 
 ---
 
-## 5) OHLCV candles
+## 4) OHLCV candles
 
-```typescript
+```js
 const now  = Math.floor(Date.now() / 1000);
-const from = now - 86400;  // last 24h
-
-const url = new URL('https://public-api.birdeye.so/x402/defi/v3/ohlcv');
-url.searchParams.set('address', tokenAddress);
-url.searchParams.set('type', '1H');        // 1m 5m 15m 1H 4H 1D
-url.searchParams.set('time_from', String(from));
-url.searchParams.set('time_to',   String(now));
-
-const res  = await fetch402(url.toString(), {
-  headers: { 'x-chain': 'solana', 'accept': 'application/json' },
+const data = await x402Get(paidFetch, '/defi/v3/ohlcv', {
+  address: tokenAddress,
+  type: '1H',                  // 1m 5m 15m 1H 4H 1D
+  time_from: now - 86400,
+  time_to: now,
 });
-const json = await res.json() as any;
-const candles = json.data.items;  // [{ o, h, l, c, v, unixTime }]
+const candles = data.items;    // [{ o, h, l, c, v, unixTime }]
 ```
 
 ---
 
-## 6) Trending tokens
+## 5) Trending tokens
 
-```typescript
-const res  = await fetch402(
-  'https://public-api.birdeye.so/x402/defi/token_trending?sort_by=rank&sort_type=asc&limit=20',
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json   = await res.json() as any;
-const tokens = json.data.tokens ?? json.data;
+```js
+const data = await x402Get(paidFetch, '/defi/token_trending', {
+  sort_by: 'rank',
+  sort_type: 'asc',
+  limit: 20,
+});
+const tokens = data.tokens ?? data;
 ```
 
 ---
 
-## 7) Top traders for a token
+## 6) Top traders for a token
 
-```typescript
-const res  = await fetch402(
-  `https://public-api.birdeye.so/x402/defi/v2/tokens/top_traders?address=${tokenAddress}&time_frame=24h&sort_by=volume&sort_type=desc&limit=10`,
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json    = await res.json() as any;
-const traders = json.data.items;
+```js
+const data = await x402Get(paidFetch, '/defi/v2/tokens/top_traders', {
+  address: tokenAddress,
+  time_frame: '24h',
+  sort_by: 'volume',
+  sort_type: 'desc',
+  limit: 10,
+});
+const traders = data.items;
 ```
 
 ---
 
-## 8) Holder distribution
+## 7) Holder distribution (note: `token_address`, not `address`)
 
-```typescript
-// ⚠️ param is token_address (not address)
-const res  = await fetch402(
-  `https://public-api.birdeye.so/x402/holder/v1/distribution?token_address=${tokenAddress}`,
-  { headers: { 'x-chain': 'solana', 'accept': 'application/json' } }
-);
-const json = await res.json() as any;
-const { summary, holders } = json.data;
+```js
+const data = await x402Get(paidFetch, '/holder/v1/distribution', {
+  token_address: tokenAddress,
+});
+const { summary, holders } = data;
 ```
 
 ---
 
-## 9) Generic helper (reusable)
+## 8) Search tokens / pairs
 
-```typescript
-async function x402Get(fetch402: typeof fetch, path: string, params: Record<string, string> = {}, chain = 'solana') {
-  const url = new URL(`https://public-api.birdeye.so/x402${path}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+```js
+const data = await x402Get(paidFetch, '/defi/v3/search', {
+  keyword: 'BONK',
+  chain: 'solana',
+  target: 'token',
+  sort_by: 'liquidity',
+  sort_type: 'desc',
+});
+```
 
-  const res = await fetch402(url.toString(), {
-    headers: { 'x-chain': chain, 'accept': 'application/json' },
-  });
+---
 
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json() as any;
-  if (!json.success) throw new Error(json.message);
-  return json.data;
-}
+## 9) Smart-money token list
 
-// Usage
-const data = await x402Get(fetch402, '/defi/price', { address: 'So111...' });
+```js
+const data = await x402Get(paidFetch, '/smart-money/v1/token/list', {
+  interval: '1d',
+  sort_by: 'smart_traders_no',
+  sort_type: 'desc',
+  limit: 20,
+});
+```
+
+---
+
+## 10) POST — batch holder counts
+
+```js
+const data = await x402Post(paidFetch, '/token/v1/holder/batch', {
+  list_address: ['So111...', 'EPjF...'],
+});
+```
+
+---
+
+## 11) POST — token transfer history
+
+```js
+const data = await x402Post(paidFetch, '/token/v1/transfer', {
+  // see Birdeye docs for body schema
+});
+```
+
+---
+
+## 12) Curl equivalent (replay after a paid request)
+
+When using the interactive CLI (`node scripts/x402-cli.mjs`), each request prints a ready-to-replay curl with the captured `PAYMENT-SIGNATURE` header. Copy it as-is to retry the exact same paid request.
+
+```bash
+curl -X GET 'https://public-api.birdeye.so/x402/defi/price?address=So11111111111111111111111111111111111111112' \
+  -H 'x-chain: solana' \
+  -H 'accept: application/json' \
+  -H 'PAYMENT-SIGNATURE: <captured-base64>'
 ```

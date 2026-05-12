@@ -12,6 +12,13 @@ You are an expert at querying transaction and transfer data using Birdeye APIs. 
 
 > `X-API-KEY` header required | `x-chain` header (default: `solana`) | Base: `https://public-api.birdeye.so`
 
+## Use This Skill vs Others
+
+**Individual on-chain events** — trades, transfers, mint/burn, balance changes. Granular, time-ordered.
+- vs `birdeye-market-data` → that returns **aggregated** OHLCV/volume/stats. Use this skill when you need the per-trade list.
+- vs `birdeye-wallet-intelligence` → that returns **derived metrics** (PnL, net worth). Some endpoints overlap (`/trader/txs/seek_by_time`, `/wallet/v2/balance-change`); pick by output shape — raw events here, summaries there.
+- vs `birdeye-realtime-streams` → that pushes events live via WebSocket. This skill is REST/historical pull.
+
 ## Routing
 
 | Intent | Reference |

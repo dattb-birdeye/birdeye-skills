@@ -18,6 +18,8 @@ You are an expert at building token screening and discovery tools using multiple
 - User wants to create an **alpha finder** / token discovery tool
 - User wants to build a **new listing scanner**
 
+> **vs other workflow skills:** Use `birdeye-research-assistant` when output is a **report/brief on one (or few) token(s)**. Use `birdeye-token-discovery` directly for a **single endpoint call** without security/smart-money enrichment. This screener is the right pick when filters span multiple domains and output is a **ranked list**.
+
 ## Skills Used
 
 | Skill | Purpose |
@@ -99,7 +101,15 @@ Cross-reference with screener results.
 For top candidates:
 ```
 birdeye-holder-analysis → GET /defi/v3/token/holder (concentration check)
+birdeye-holder-analysis → GET /token/v1/holder-profile (Solana — bundler/sniper/insider/dev/smart_trader % breakdown; useful for filtering out high-bundler/sniper tokens)
+birdeye-holder-analysis → GET /token/v1/holder/chart (holder count trend — flag tokens with declining holders)
 ```
+
+Optional criteria you can add to `ScreenerCriteria` (post-filter from `holder-profile` response):
+- `maxBundlerPct` — exclude tokens with bundler concentration above threshold
+- `maxSniperPct` — exclude tokens with high sniper presence
+- `minSmartTraderPct` — require minimum smart_trader presence
+- `minHolderGrowth24h` — require positive holder count delta from `holder/chart`
 
 ### Step 6: Set Up Live Updates
 ```
