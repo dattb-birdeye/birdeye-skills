@@ -821,6 +821,316 @@ function docsSync() {
 // ---------------------------------------------------------------------------
 
 const BIRDEYE_BASE = 'https://public-api.birdeye.so';
+const BIRDEYE_LLM_BASE = 'https://multichain-api.birdeye.so';
+const AUTH_FILE = join(CONFIG_DIR, 'auth.json');
+
+// Headers required to pass Cloudflare on multichain-api.birdeye.so.
+// `origin` and `referer` must point to bds.birdeye.so or the request is rejected.
+const LLM_HEADERS = {
+  'accept': 'application/json, text/plain, */*',
+  'content-type': 'application/json',
+  'origin': 'https://bds.birdeye.so',
+  'referer': 'https://bds.birdeye.so/',
+  'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+};
+
+function loadAuth() {
+  if (!existsSync(AUTH_FILE)) return null;
+  try { return JSON.parse(readFileSync(AUTH_FILE, 'utf-8')); } catch { return null; }
+}
+
+function saveAuth(data) {
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  writeFileSync(AUTH_FILE, JSON.stringify(data, null, 2));
+  try { execSync(`chmod 600 "${AUTH_FILE}"`); } catch {}
+}
+
+// Arrow-key selectable menu. Falls back to numeric prompt on non-TTY.
+function selectPrompt(question, options) {
+  return new Promise((resolve) => {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      // Non-interactive fallback: print and return default
+      console.log(`  ${question}`);
+      options.forEach((o, i) => console.log(`     ${i + 1}) ${o.label}`));
+      resolve(options[0]?.value);
+      return;
+    }
+
+    let idx = 0;
+    const stdin = process.stdin;
+    const stdout = process.stdout;
+    const N = options.length;
+
+    const render = (first = false) => {
+      if (!first) {
+        // Move cursor up N+1 lines and clear
+        stdout.write(`\x1b[${N + 1}A`);
+      }
+      stdout.write(`\x1b[2K  ${C.bold}${question}${C.reset} ${C.dim}(↑/↓ to move, Enter to select)${C.reset}\n`);
+      options.forEach((o, i) => {
+        const marker = i === idx ? `${C.cyan}❯${C.reset}` : ' ';
+        const label = i === idx ? `${C.cyan}${o.label}${C.reset}` : o.label;
+        const desc = o.description ? ` ${C.dim}— ${o.description}${C.reset}` : '';
+        stdout.write(`\x1b[2K   ${marker} ${label}${desc}\n`);
+      });
+    };
+
+    const cleanup = () => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.removeListener('data', onData);
+    };
+
+    const onData = (buf) => {
+      const key = buf.toString();
+      if (key === '\x03') { // Ctrl+C
+        cleanup();
+        stdout.write('\n');
+        process.exit(130);
+      } else if (key === '\r' || key === '\n') {
+        cleanup();
+        stdout.write('\n');
+        resolve(options[idx].value);
+      } else if (key === '\x1b[A' || key === 'k') { // up
+        idx = (idx - 1 + N) % N;
+        render();
+      } else if (key === '\x1b[B' || key === 'j') { // down
+        idx = (idx + 1) % N;
+        render();
+      } else if (/^[1-9]$/.test(key)) {
+        const n = parseInt(key, 10) - 1;
+        if (n < N) { idx = n; render(); }
+      }
+    };
+
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.on('data', onData);
+    render(true);
+  });
+}
+
+function promptLine(question, { hidden = false } = {}) {
+  return new Promise((resolve) => {
+    if (!process.stdin.isTTY) { resolve(''); return; }
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    process.stdout.write(`  ${C.cyan}?${C.reset}  ${question}`);
+    if (!hidden) {
+      rl.once('line', (line) => { rl.close(); resolve(line.trim()); });
+      return;
+    }
+    let muted = true;
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk, ...rest) => {
+      if (muted && typeof chunk === 'string' && chunk !== '\n' && chunk !== '\r\n') return true;
+      return origWrite(chunk, ...rest);
+    };
+    rl.once('line', (line) => {
+      muted = false;
+      process.stdout.write = origWrite;
+      origWrite('\n');
+      rl.close();
+      resolve(line.trim());
+    });
+  });
+}
+
+async function loginRequest(email, password) {
+  const res = await fetch(`${BIRDEYE_LLM_BASE}/llm/login`, {
+    method: 'POST',
+    headers: LLM_HEADERS,
+    body: JSON.stringify({ email, password }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success || !json.token) {
+    throw new Error(json.message || json.error || `Login failed (HTTP ${res.status})`);
+  }
+  return json.token;
+}
+
+async function listApiKeys(sessionToken) {
+  const url = new URL(`${BIRDEYE_LLM_BASE}/llm/tokens`);
+  url.searchParams.set('token', sessionToken);
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: { ...LLM_HEADERS, authorization: `Bearer ${sessionToken}` },
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || json.error || `List tokens failed (HTTP ${res.status})`);
+  }
+  return Array.isArray(json.data) ? json.data : [];
+}
+
+async function generateApiKey(sessionToken, name = 'cli-key') {
+  const res = await fetch(`${BIRDEYE_LLM_BASE}/llm/tokens`, {
+    method: 'POST',
+    headers: LLM_HEADERS,
+    body: JSON.stringify({ name, token: sessionToken }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success || !json.data?.length) {
+    throw new Error(json.message || json.error || `Token generation failed (HTTP ${res.status})`);
+  }
+  return json.data[json.data.length - 1].token;
+}
+
+async function runLogin(argv) {
+  const emailArg = argv.find(a => a.startsWith('--email='))?.slice(8);
+  let email = emailArg || await promptLine('Your email: ');
+  if (!email) { console.error('Email required.'); process.exit(1); }
+  let password = await promptLine('Password (hidden): ', { hidden: true });
+  if (!password) { console.error('Password required.'); process.exit(1); }
+  console.log('');
+  info('Logging in...');
+  try {
+    const token = await loginRequest(email, password);
+    saveAuth({ email, token, loggedInAt: new Date().toISOString() });
+    ok(`Logged in as ${email}`);
+    info(`Session saved → ${AUTH_FILE}`);
+    info('Next: npx birdeye-skills gen-token --save');
+  } catch (e) {
+    console.error(`  ${C.red}✗${C.reset}  ${e.message}`);
+    process.exit(1);
+  }
+}
+
+function writeApiKeyToMcpConfigs(apiKey) {
+  const mcpFiles = [
+    join(HOME, '.claude', 'settings.json'),
+    join(HOME, '.cursor', 'mcp.json'),
+  ];
+  for (const f of mcpFiles) {
+    if (!existsSync(dirname(f))) continue;
+    try {
+      let cfg = {};
+      if (existsSync(f)) cfg = JSON.parse(readFileSync(f, 'utf8'));
+      cfg.mcpServers = cfg.mcpServers || {};
+      cfg.mcpServers['birdeye-mcp'] = makeBirdeyeMcpConfig(apiKey);
+      writeFileSync(f, JSON.stringify(cfg, null, 2) + '\n');
+      ok(`API key saved → ${f}`);
+    } catch (e) {
+      warn(`Could not write API key to ${f}: ${e.message}`);
+    }
+  }
+}
+
+async function runGenToken(argv) {
+  const auth = loadAuth();
+  if (!auth?.token) {
+    console.error(`  ${C.red}✗${C.reset}  Not logged in. Run: npx birdeye-skills login`);
+    process.exit(1);
+  }
+  let name = 'cli-key';
+  let save = false;
+  let force = false;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--name' && argv[i + 1]) { name = argv[++i]; }
+    else if (argv[i].startsWith('--name=')) { name = argv[i].slice(7); }
+    else if (argv[i] === '--save') { save = true; }
+    else if (argv[i] === '--force' || argv[i] === '--new') { force = true; }
+  }
+
+  if (!force) {
+    try {
+      const existing = await listApiKeys(auth.token);
+      const pick = existing.find(k => k.name === name) || existing[0];
+      if (pick) {
+        ok(`Reusing existing API key "${pick.name}"  ${C.dim}(use --force to create a new one)${C.reset}`);
+        console.log('');
+        ok(`API key: ${pick.token}`);
+        console.log('');
+        if (save) writeApiKeyToMcpConfigs(pick.token);
+        return;
+      }
+    } catch (e) {
+      warn(`Could not list existing keys (${e.message}) — proceeding to create.`);
+    }
+  }
+
+  info(`Generating API key "${name}"...`);
+  try {
+    const apiKey = await generateApiKey(auth.token, name);
+    console.log('');
+    ok(`API key: ${apiKey}`);
+    console.log('');
+    if (save) writeApiKeyToMcpConfigs(apiKey);
+  } catch (e) {
+    console.error(`  ${C.red}✗${C.reset}  ${e.message}`);
+    if (/401|unauthor/i.test(e.message)) info('Session may have expired — re-run: npx birdeye-skills login');
+    process.exit(1);
+  }
+}
+
+async function loginAndGenApiKey(name = 'cli-key') {
+  let auth = loadAuth();
+  if (!auth?.token) {
+    const email = await promptLine('Your email: ');
+    if (!email) return null;
+    const password = await promptLine('Password (hidden): ', { hidden: true });
+    if (!password) return null;
+    info('Logging in...');
+    try {
+      const token = await loginRequest(email, password);
+      auth = { email, token, loggedInAt: new Date().toISOString() };
+      saveAuth(auth);
+      ok(`Logged in as ${email}`);
+    } catch (e) {
+      console.error(`  ${C.red}✗${C.reset}  Login failed: ${e.message}`);
+      return null;
+    }
+  } else {
+    info(`Using saved session for ${auth.email}`);
+  }
+
+  // Reuse existing key if any — avoid creating duplicates on every install.
+  try {
+    const existing = await listApiKeys(auth.token);
+    if (existing.length > 0) {
+      const pick = existing.find(k => k.name === name) || existing[0];
+      ok(`Reusing existing API key "${pick.name}"`);
+      return pick.token;
+    }
+  } catch (e) {
+    warn(`Could not list keys (${e.message}) — will create a new one.`);
+  }
+
+  info(`No existing key found — generating "${name}"...`);
+  try {
+    const apiKey = await generateApiKey(auth.token, name);
+    ok(`API key generated`);
+    return apiKey;
+  } catch (e) {
+    console.error(`  ${C.red}✗${C.reset}  Token gen failed: ${e.message}`);
+    return null;
+  }
+}
+
+async function runListKeys() {
+  const auth = loadAuth();
+  if (!auth?.token) {
+    console.error(`  ${C.red}✗${C.reset}  Not logged in. Run: birdeye-skills login`);
+    process.exit(1);
+  }
+  info(`Listing API keys for ${auth.email}...`);
+  try {
+    const keys = await listApiKeys(auth.token);
+    console.log('');
+    if (keys.length === 0) {
+      warn('No API keys yet.');
+      info('Create one: birdeye-skills gen-token --save');
+      return;
+    }
+    for (const k of keys) {
+      ok(`${k.name}  ${C.dim}${k.token}${C.reset}  ${C.dim}(${k.createdAt})${C.reset}`);
+    }
+    console.log('');
+  } catch (e) {
+    console.error(`  ${C.red}✗${C.reset}  ${e.message}`);
+    if (/401|unauthor/i.test(e.message)) info('Session may have expired — re-run: birdeye-skills login');
+    process.exit(1);
+  }
+}
 
 function getApiKey() {
   if (process.env.BIRDEYE_API_KEY) return process.env.BIRDEYE_API_KEY;
@@ -1017,6 +1327,10 @@ Other commands:
   update           Update installed skills to latest version
   check            Check version and update status
   list             List installed skills
+  login            Log in to Birdeye (stores session token in ~/.birdeye/auth.json)
+  list-keys        List existing API keys for the logged-in account
+  gen-token        Get-or-create an API key [--name X] [--save] [--force]
+  logout           Remove saved Birdeye session
   api <sub>        Call Birdeye API directly
 
 API sub-commands:
@@ -1218,13 +1532,33 @@ async function main() {
         }
       }
 
-      // Interactive API key prompt when none was supplied
-      if (!apiKey && !process.env.BIRDEYE_API_KEY && platform !== 'bundle') {
+      // Interactive API key prompt when none was supplied AND none already configured
+      const existingKey = getApiKey();
+      const hasKey = existingKey && existingKey !== '<YOUR_BIRDEYE_API_KEY>';
+      if (!apiKey && !process.env.BIRDEYE_API_KEY && hasKey && platform !== 'bundle') {
         console.log('');
-        info('Get a free API key: https://bds.birdeye.so → Usages → Security → Generate key');
-        const enteredKey = await readApiKey();
-        if (enteredKey) {
-          // Write entered key to all relevant MCP configs
+        ok(`API key already configured — skipping setup ${C.dim}(re-run with --api-key to replace)${C.reset}`);
+      }
+      if (!apiKey && !process.env.BIRDEYE_API_KEY && !hasKey && platform !== 'bundle') {
+        console.log('');
+        const choice = await selectPrompt('API key setup', [
+          { label: 'I already have an API key', value: 'paste',  description: 'paste it (or skip)' },
+          { label: 'Login via CLI',             value: 'login',  description: 'auto-generate via email + password' },
+          { label: 'Skip',                      value: 'skip',   description: 'configure later' },
+        ]);
+
+        let finalKey = '';
+        if (choice === 'paste') {
+          console.log('');
+          info('Get a key at: https://bds.birdeye.so → Usages → Security → Generate key');
+          finalKey = await promptLine('Paste API key (Enter to skip): ', { hidden: false });
+        } else if (choice === 'login') {
+          console.log('');
+          finalKey = await loginAndGenApiKey('claude-skills') || '';
+          console.log('');
+        }
+
+        if (finalKey) {
           const mcpFiles = [];
           if (platform === 'all' || platform === 'claude') mcpFiles.push(join(HOME, '.claude', 'settings.json'));
           if (platform === 'all' || platform === 'cursor') mcpFiles.push(join(HOME, '.cursor', 'mcp.json'));
@@ -1233,7 +1567,7 @@ async function main() {
               let cfg = {};
               if (existsSync(f)) cfg = JSON.parse(readFileSync(f, 'utf8'));
               cfg.mcpServers = cfg.mcpServers || {};
-              cfg.mcpServers['birdeye-mcp'] = makeBirdeyeMcpConfig(enteredKey);
+              cfg.mcpServers['birdeye-mcp'] = makeBirdeyeMcpConfig(finalKey);
               writeFileSync(f, JSON.stringify(cfg, null, 2));
               ok(`API key saved → ${f}`);
             } catch (e) {
@@ -1244,6 +1578,7 @@ async function main() {
           console.log('');
           info('To set your API key later:');
           console.log(`       npx birdeye-skills install --api-key YOUR_KEY`);
+          console.log(`       npx birdeye-skills login && npx birdeye-skills gen-token --save`);
         }
       }
 
@@ -1295,6 +1630,29 @@ async function main() {
 
     case 'api':
       await runApiCommand(args.slice(1));
+      break;
+
+    case 'login':
+      await runLogin(args.slice(1));
+      break;
+
+    case 'gen-token':
+    case 'gen-key':
+      await runGenToken(args.slice(1));
+      break;
+
+    case 'list-keys':
+    case 'list-tokens':
+      await runListKeys();
+      break;
+
+    case 'logout':
+      if (existsSync(AUTH_FILE)) {
+        rmSync(AUTH_FILE, { force: true });
+        ok('Logged out — session removed.');
+      } else {
+        info('No active session.');
+      }
       break;
 
     case 'cache':

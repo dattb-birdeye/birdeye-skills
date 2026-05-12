@@ -103,7 +103,17 @@ All Birdeye API calls require an API key in the header:
 X-API-KEY: <your-api-key>
 ```
 
-Get an API key at https://bds.birdeye.so
+If no key is configured, offer the user three options — do **not** stop the task:
+
+> Use `birdeye-skills <cmd>` if installed globally, otherwise `npx birdeye-skills <cmd>`.
+
+1. **Paste existing key**: `birdeye-skills install --api-key YOUR_KEY` (get one at https://bds.birdeye.so → Usages → Security)
+2. **CLI login (auto-create key)** — print these two commands for the user to run; never type their password yourself:
+   ```bash
+   birdeye-skills login              # prompts email + password
+   birdeye-skills gen-token --save   # generates key, writes into MCP configs
+   ```
+3. **No account / no key** — route the request to the **birdeye-x402** skill (pay-per-request in USDC).
 
 ### Chain Selection
 
